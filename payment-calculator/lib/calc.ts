@@ -11,6 +11,12 @@ export type ScheduleRow = {
   percent?: number;
   amount: number;
   cumulative: number;
+  /**
+   * Lũy kế tỷ lệ thanh toán (cộng dồn cột Tỷ lệ, như bảng Excel): 5%, 10%, 15%…
+   * Khoản ứng trước tính theo tỷ lệ của nó cho tới khi được cấn trừ.
+   * undefined với khoản chỉ có số tiền cố định (cọc) và chưa có tỷ lệ nào trước đó.
+   */
+  cumulativePercent?: number;
   payer: "customer" | "bank";
   includesMaintenance: boolean;
   dueDate?: Date;
@@ -152,6 +158,8 @@ export function computeQuote(
 
   let pendingAdvances = 0;
   let cumulative = 0;
+  let percentSum = 0;
+  let pendingAdvancePercent = 0;
   const schedule: ScheduleRow[] = method.milestones.map((m, i) => {
     let amount: number;
     if (m.remainder) {
@@ -168,6 +176,12 @@ export function computeQuote(
       if (m.includeMaintenance) amount += maintenance;
     }
     cumulative += amount;
+
+    if (m.deductAdvances) pendingAdvancePercent = 0;
+    if (m.advance) pendingAdvancePercent += m.percent ?? 0;
+    else percentSum += m.percent ?? 0;
+    const pctSoFar = percentSum + pendingAdvancePercent;
+    const cumulativePercent = pctSoFar > 0 ? Math.round(pctSoFar * 1e8) / 1e8 : undefined;
     return {
       index: i + 1,
       label: m.label,
@@ -176,6 +190,7 @@ export function computeQuote(
       percent: m.advance ? undefined : m.percent,
       amount,
       cumulative,
+      cumulativePercent,
       payer: m.payer ?? "customer",
       includesMaintenance: !!m.includeMaintenance,
       dueDate: dueDate(input.contractDate, m.monthsAfterContract, m.daysAfterContract),

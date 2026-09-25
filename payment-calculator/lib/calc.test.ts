@@ -116,3 +116,19 @@ test("hạ chiết khấu PTTT theo khách, không vượt mức tối đa", () 
   assert.equal(at(0.2), 0.11);
   assert.equal(computeQuote(pr, m, { ...input, methodDiscount: 0 }).discounts.length, 0);
 });
+
+test("lũy kế là cộng dồn tỷ lệ các đợt như bảng Excel", () => {
+  const cum = (project: typeof pr, id: string) => {
+    const u = project.units[0];
+    const q = computeQuote(project, project.methods.find((m) => m.id === id)!, {
+      listPrice: unitListPrice(project, u),
+      netArea: u.netArea,
+    });
+    return q.schedule.map((r) => (r.cumulativePercent === undefined ? undefined : Math.round(r.cumulativePercent * 1000) / 10));
+  };
+  // Palm River PTTT Chuẩn: XNĐK —, Đợt 1 5%, Đợt 2 10% … Đợt 11 100%
+  assert.deepEqual(cum(pr, "pttt-chuan"), [undefined, 5, 10, 15, 20, 30, 40, 50, 60, 70, 95, 100]);
+  assert.deepEqual(cum(pr, "pttt-vay"), [undefined, 5, 10, 65, 80, 95, 100]);
+  // Serena: Cọc —, VBTT 5% (ứng trước), Đợt 1 70% (đã gồm VBTT), bàn giao 95%, GCN 100%
+  assert.deepEqual(cum(srn, "pttt-nhanh-70"), [undefined, 5, 70, 95, 100]);
+});

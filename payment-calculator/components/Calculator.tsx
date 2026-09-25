@@ -680,7 +680,7 @@ function Schedule({ quote, showDates }: { quote: Quote; showDates: boolean }) {
               {showDates && <td data-label="Dự kiến">{r.dueDate ? formatDate(r.dueDate) : "—"}</td>}
               <td className="num" data-label="Tỷ lệ">{r.percent !== undefined ? formatPercent(r.percent) : "—"}</td>
               <td className="num amount" data-label="Giá trị (đ)">{formatVnd(r.amount)}</td>
-              <td className="num muted" data-label="Lũy kế">{formatPercent(r.cumulative / quote.total)}</td>
+              <td className="num muted" data-label="Lũy kế">{r.cumulativePercent !== undefined ? formatPercent(r.cumulativePercent) : "—"}</td>
             </tr>
           ))}
         </tbody>
