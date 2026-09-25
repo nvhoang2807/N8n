@@ -61,3 +61,18 @@ test("mẫu dự án trống chỉ thiếu căn", () => {
   p.name = "Dự án mới";
   assert.deepEqual(validateProject(p).errors, ["Dự án chưa có căn nào."]);
 });
+
+test("không báo nhầm 'đợt âm' khi loại căn chưa có đơn giá tham khảo", () => {
+  const palm = defaultProjects.find((p) => p.id === "palm-river")!;
+  // Danh sách giống admin Palm River: căn 2PN đứng đầu, chỉ 3PN có đơn giá tham khảo
+  const project = {
+    ...palm,
+    units: [
+      { code: "CT3-10-1", type: "2PN", grossArea: 84.9, netArea: 75.8 },
+      { code: "CT3-10-5", type: "3PN", grossArea: 126.1, netArea: 115.2 },
+    ],
+  };
+  assert.deepEqual(validateProject(project).errors, []);
+  // Không có đơn giá nào: vẫn lưu được, không tự đoán giá để báo âm
+  assert.deepEqual(validateProject({ ...project, defaultUnitPrice: {} }).errors, []);
+});

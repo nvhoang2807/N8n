@@ -52,7 +52,14 @@ export function validateProject(p: Project): ValidationResult {
   // PTTT
   if (p.methods.length === 0) errors.push("Dự án chưa có phương thức thanh toán nào.");
   const methodIds = new Set<string>();
-  const sampleUnit = p.units.find((u) => u.grossArea > 0);
+  const sampleUnit = p.units.find((u) => u.grossArea > 0 || u.netArea > 0);
+  // Giá dùng để tính thử: giá của căn mẫu; loại căn chưa có đơn giá tham khảo thì lấy đơn giá
+  // tham khảo cao nhất của dự án. Không có đơn giá nào thì không kiểm tra đợt âm (tránh báo nhầm).
+  const knownPrices = Object.values(p.defaultUnitPrice).filter((v) => v > 0);
+  const samplePrice = sampleUnit
+    ? unitListPrice(p, sampleUnit) ||
+      (knownPrices.length ? unitListPrice(p, sampleUnit, Math.max(...knownPrices)) : 0)
+    : 0;
   for (const m of p.methods) {
     const name = m.name || m.id || "(chưa đặt tên)";
     if (!m.id || !SLUG.test(m.id)) errors.push(`PTTT "${name}": mã không hợp lệ.`);
@@ -82,10 +89,10 @@ export function validateProject(p: Project): ValidationResult {
     }
 
     if (sampleUnit && Math.abs(total - 1) <= 1e-6) {
-      const listPrice = unitListPrice(p, sampleUnit) || 1_000_000_000;
+      const listPrice = samplePrice || 1_000_000_000;
       const q = computeQuote(p, m, { listPrice, netArea: sampleUnit.netArea });
       const negative = q.schedule.find((r) => r.amount < 0);
-      if (negative) {
+      if (negative && samplePrice > 0) {
         errors.push(`PTTT "${name}": ${negative.label} bị âm — kiểm tra lại cọc/ứng trước và tỷ lệ.`);
       }
       if (q.mismatch !== 0) {
