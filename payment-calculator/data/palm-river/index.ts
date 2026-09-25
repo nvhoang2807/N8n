@@ -56,6 +56,7 @@ export const palmRiver: Project = {
   priceArea: "net",
   customUnits: true,
   adjustableMethodDiscount: true,
+  totalLabel: "Tổng giá trị sau CK gồm VAT & PBT",
   optionalDiscounts: [
     { id: "early-bird", label: "Chiết khấu Early Bird", options: [0, 0.005, 0.01], default: 0.005 },
     { id: "than-thiet", label: "Chiết khấu KH thân thiết", options: [0, 0.01], default: 0 },

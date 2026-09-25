@@ -125,6 +125,8 @@ export type Project = {
   priceArea?: "gross" | "net";
   /** Cho nhân viên nhập căn không có trong danh sách (tự điền loại, diện tích, đơn giá) */
   customUnits?: boolean;
+  /** Tên dòng tổng giá trị hiển thị cho khách. Mặc định "Tổng giá trị HĐMB" */
+  totalLabel?: string;
   /** Cho nhân viên hạ chiết khấu PTTT theo từng khách (không vượt mức cấu hình) */
   adjustableMethodDiscount?: boolean;
   /** Đơn giá tiền sử dụng đất (VND/m² thông thủy), trừ khỏi cơ sở tính VAT */

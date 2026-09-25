@@ -227,6 +227,14 @@ function GeneralTab({
             <input value={project.location ?? ""} onChange={(e) => update({ location: e.target.value || undefined })} />
           </label>
           <label>
+            Tên dòng tổng giá trị
+            <input
+              value={project.totalLabel ?? ""}
+              placeholder="Tổng giá trị HĐMB"
+              onChange={(e) => update({ totalLabel: e.target.value || undefined })}
+            />
+          </label>
+          <label>
             Mô tả ngắn
             <input value={project.description ?? ""} onChange={(e) => update({ description: e.target.value || undefined })} />
           </label>

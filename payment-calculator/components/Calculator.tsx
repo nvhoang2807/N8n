@@ -102,6 +102,17 @@ function stateToUrl(project: Project, s: State): string {
 
 const digits = (v: string) => v.replace(/\D/g, "");
 
+/** Vị trí đợt ký HĐMB: đợt cuối có mốc 0 tháng sau HĐMB; không có thì đợt "Đợt 1" */
+function contractMilestoneIndex(method: PaymentMethod): number {
+  const ms = method.milestones;
+  for (let i = ms.length - 1; i >= 0; i--) if (ms[i].monthsAfterContract === 0) return i;
+  const first = ms.findIndex((m) => m.label === "Đợt 1");
+  return first >= 0 ? first : 0;
+}
+
+const DEFAULT_TOTAL_LABEL = "Tổng giá trị HĐMB";
+const totalLabelOf = (project: Project) => project.totalLabel?.trim() || DEFAULT_TOTAL_LABEL;
+
 const pricedAreaOf = (project: Project, u: Unit) => (project.priceArea === "net" ? u.netArea : u.grossArea);
 
 /** Tìm căn theo mã, bỏ qua hoa/thường, dấu gạch và khoảng trắng ("b0602" → B-06-02) */
@@ -403,9 +414,10 @@ export default function Calculator({
             <span className="step">2</span>So sánh phương thức thanh toán
           </h2>
           <p className="muted">
-            Bấm vào một PTTT để xem chi tiết. “Tiết kiệm” so với PTTT có tổng giá trị HĐMB cao nhất.
+            Bấm vào một PTTT để xem chi tiết. “Tiết kiệm” so với PTTT có {totalLabelOf(project).toLowerCase()} cao nhất.
           </p>
           <Compare
+            totalLabel={totalLabelOf(project)}
             quotes={quotes}
             selectedId={selected.method.id}
             onSelect={(id) => update({ methodId: id })}
@@ -523,10 +535,12 @@ function Compare({
   quotes,
   selectedId,
   onSelect,
+  totalLabel,
 }: {
   quotes: { method: PaymentMethod; quote: Quote }[];
   selectedId: string;
   onSelect: (id: string) => void;
+  totalLabel: string;
 }) {
   const maxTotal = Math.max(...quotes.map((q) => q.quote.total));
   return (
@@ -535,7 +549,7 @@ function Compare({
         <thead>
           <tr>
             <th>PTTT</th>
-            <th className="num">Tổng giá trị HĐMB</th>
+            <th className="num">{totalLabel}</th>
             <th className="num">Tiết kiệm</th>
             <th className="num">Đến khi ký HĐMB</th>
             <th className="num">Ngân hàng cho vay</th>
@@ -543,10 +557,10 @@ function Compare({
         </thead>
         <tbody>
           {quotes.map(({ method, quote }) => {
-            // Vốn khách cần chuẩn bị tới hết Đợt 1 (ký HĐMB)
-            const firstIdx = quote.schedule.findIndex((r) => r.label === "Đợt 1");
+            // Vốn khách cần chuẩn bị tới hết đợt ký HĐMB (đợt có mốc 0 tháng sau HĐMB)
+            const contractIdx = contractMilestoneIndex(method);
             const upfront = quote.schedule
-              .slice(0, firstIdx >= 0 ? firstIdx + 1 : 1)
+              .slice(0, contractIdx + 1)
               .filter((r) => r.payer === "customer")
               .reduce((s, r) => s + r.amount, 0);
             const saving = maxTotal - quote.total;
@@ -560,7 +574,7 @@ function Compare({
                   <strong>{method.name}</strong>
                   <div className="muted small">{method.summary}</div>
                 </td>
-                <td className="num" data-label="Tổng giá trị HĐMB">{formatShort(quote.total)}</td>
+                <td className="num" data-label={totalLabel}>{formatShort(quote.total)}</td>
                 <td className="num good" data-label="Tiết kiệm">{saving > 0 ? `−${formatShort(saving)}` : "—"}</td>
                 <td className="num" data-label="Đến khi ký HĐMB">{formatShort(upfront)}</td>
                 <td className="num" data-label="Ngân hàng cho vay">{quote.bankPays > 0 ? formatShort(quote.bankPays) : "—"}</td>
@@ -606,7 +620,9 @@ function Breakdown({ project, quote }: { project: Project; quote: Quote }) {
           </tbody>
           <tfoot>
             <tr>
-              <td>Tổng giá trị HĐMB (gồm VAT & phí bảo trì)</td>
+              <td>
+                {project.totalLabel?.trim() ? totalLabelOf(project) : `${DEFAULT_TOTAL_LABEL} (gồm VAT & phí bảo trì)`}
+              </td>
               <td className="num">{formatVnd(quote.total)}</td>
             </tr>
           </tfoot>
@@ -614,7 +630,7 @@ function Breakdown({ project, quote }: { project: Project; quote: Quote }) {
       </div>
       <div className="kpis">
         <div className="kpi-main">
-          <span>Tổng giá trị HĐMB</span>
+          <span>{totalLabelOf(project)}</span>
           <strong>{formatShort(quote.total)}</strong>
         </div>
         <div>
