@@ -62,8 +62,21 @@ export const palmRiver: Project = {
     { id: "than-thiet", label: "Chiết khấu KH thân thiết", options: [0, 0.01], default: 0 },
     { id: "si", label: "Chiết khấu sỉ", options: [0, 0.005, 0.01, 0.015], default: 0 },
   ],
-  // Căn mẫu trong sheet GIỎ HÀNG; căn khác nhân viên tự nhập
-  units: [{ code: "PR-10-10", type: "3PN", grossArea: 145, netArea: 130 }],
+  // Giỏ hàng tầng 10 tháp CT3, CT4 (nhập từ admin); căn khác nhân viên tự nhập
+  units: [
+    { code: "CT3-10-1", type: "2PN", grossArea: 84.9, netArea: 75.8 },
+    { code: "CT3-10-2", type: "2PN", grossArea: 85.9, netArea: 76.9 },
+    { code: "CT3-10-3", type: "2PN", grossArea: 120.2, netArea: 110.9 },
+    { code: "CT3-10-4", type: "2PN", grossArea: 84.9, netArea: 75.8 },
+    { code: "CT3-10-5", type: "3PN", grossArea: 126.1, netArea: 115.2 },
+    { code: "CT3-10-6", type: "3PN", grossArea: 125.3, netArea: 115.3 },
+    { code: "CT4-10-1", type: "2PN", grossArea: 84.9, netArea: 75.8 },
+    { code: "CT4-10-2", type: "2PN", grossArea: 85.9, netArea: 76.9 },
+    { code: "CT4-10-3", type: "2PN", grossArea: 121.9, netArea: 111.7 },
+    { code: "CT4-10-4", type: "2PN", grossArea: 120.2, netArea: 110.9 },
+    { code: "CT4-10-5", type: "3PN", grossArea: 126.1, netArea: 115.2 },
+    { code: "CT4-10-6", type: "3PN", grossArea: 157, netArea: 146.3 },
+  ],
   methods: [
     method("pttt-dac-biet", "PTTT Đặc biệt", "CK đến 6.5% · Thanh toán 30% đến khi nhận nhà", 0.065, [
       ...head(0.05),

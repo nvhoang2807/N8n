@@ -50,6 +50,25 @@ export function parseUnitsTable(text: string): ImportResult {
   return { units, skipped };
 }
 
+/** Các dòng đọc từ file Excel (mảng ô) → bảng chữ như khi dán, để dùng chung parseUnitsTable */
+export function rowsToTable(rows: unknown[][]): string {
+  return rows
+    .map((row) =>
+      row
+        .map((cell) => (cell === null || cell === undefined || cell instanceof Date ? "" : String(cell).replace(/[\t\n\r]+/g, " ").trim()))
+        .join("\t"),
+    )
+    .join("\n");
+}
+
+/** Dữ liệu cho file Excel mẫu: dòng tiêu đề + danh sách căn (hoặc 1 dòng ví dụ nếu chưa có căn) */
+export function unitsToRows(units: Unit[], exampleType = "CH"): (string | number | null)[][] {
+  const rows = units.length
+    ? units.map((u) => [u.code, u.type, u.bedrooms ?? null, u.bathrooms ?? null, u.direction ?? null, u.grossArea, u.netArea, u.price ?? null])
+    : [["A-01-01", exampleType, 2, 2, "ĐN", 75.5, 68.2, null]];
+  return [[...UNIT_COLUMNS], ...rows];
+}
+
 export function unitsToTable(units: Unit[]): string {
   const rows = units.map((u) =>
     [u.code, u.type, u.bedrooms ?? "", u.bathrooms ?? "", u.direction ?? "", u.grossArea, u.netArea, u.price ?? ""].join("\t"),

@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { saveProjectAction } from "@/app/admin/actions";
 import { computeQuote, formatPercent, formatVnd, unitListPrice } from "@/lib/calc.ts";
-import { parseUnitsTable, UNIT_COLUMNS, unitsToTable } from "@/lib/importUnits.ts";
+import { parseUnitsTable, rowsToTable, UNIT_COLUMNS, unitsToRows, unitsToTable } from "@/lib/importUnits.ts";
 import { blankMethod, blankMilestone, slugify } from "@/lib/templates.ts";
 import type { Discount, Loan, Milestone, OptionalDiscount, PaymentMethod, Project, Unit } from "@/lib/types";
 import { validateProject } from "@/lib/validate.ts";
+import type { SheetData } from "write-excel-file/browser";
 import { move, NumberField, PercentField, PercentListField, RowTools } from "./fields";
 
 type Tab = "general" | "units" | "methods";
@@ -473,16 +474,34 @@ function UnitsTab({ project, update }: { project: Project; update: (p: Partial<P
   const setUnit = (index: number, patch: Partial<Unit>) =>
     update({ units: project.units.map((u, i) => (i === index ? { ...u, ...patch } : u)) });
 
-  const doImport = (mode: "replace" | "merge") => {
-    const { units, skipped } = parseUnitsTable(paste);
+  /** Loại căn ghi bằng tên hiển thị ("Căn hộ 2PN") → đổi về mã loại ("2PN") */
+  const typeCode = (t: string) => {
+    if (project.unitTypes[t]) return t;
+    const key = t.trim().toLowerCase();
+    return (
+      Object.keys(project.unitTypes).find((c) => c.toLowerCase() === key || project.unitTypes[c].trim().toLowerCase() === key) ?? t
+    );
+  };
+
+  const importText = (text: string, mode: "replace" | "merge", source: string) => {
+    const parsed = parseUnitsTable(text);
+    const units = parsed.units.map((u) => ({ ...u, type: typeCode(u.type) }));
+    const { skipped } = parsed;
     if (units.length === 0) {
-      setMessage("Không đọc được căn nào. Hãy copy đúng các cột theo thứ tự bên trên (kể cả dòng tiêu đề cũng được).");
+      setMessage(`Không đọc được căn nào từ ${source}. Kiểm tra lại các cột theo đúng thứ tự: ${UNIT_COLUMNS.join(" | ")}.`);
       return;
     }
     let next: Unit[];
+    let added = units.length;
+    let changed = 0;
     if (mode === "replace") next = units;
     else {
       const byCode = new Map(project.units.map((u) => [u.code, u]));
+      const key = (u: Unit) =>
+        JSON.stringify(Object.entries(u).filter(([, v]) => v !== undefined && v !== "").sort(([x], [y]) => x.localeCompare(y)));
+      const same = (a: Unit, b: Unit) => key(a) === key(b);
+      added = units.filter((u) => !byCode.has(u.code)).length;
+      changed = units.filter((u) => byCode.has(u.code) && !same(byCode.get(u.code)!, u)).length;
       for (const u of units) byCode.set(u.code, u);
       next = [...byCode.values()];
     }
@@ -491,17 +510,72 @@ function UnitsTab({ project, update }: { project: Project; update: (p: Partial<P
       units: next,
       unitTypes: { ...project.unitTypes, ...Object.fromEntries(newTypes.map((t) => [t, t])) },
     });
-    setPaste("");
     setPage(0);
     setMessage(
-      `Đã nhập ${units.length} căn${mode === "merge" ? " (cập nhật căn trùng mã)" : ""}.` +
+      (mode === "merge"
+        ? `Đã thêm ${added} căn mới${changed ? `, cập nhật ${changed} căn có thay đổi` : ""} từ ${source} (giữ nguyên các căn cũ). Bấm Lưu để áp dụng.`
+        : `Đã thay danh sách bằng ${units.length} căn từ ${source}. Bấm Lưu để áp dụng.`) +
         (newTypes.length ? ` Đã thêm loại mới: ${newTypes.join(", ")} — đặt tên & đơn giá ở tab Thông tin chung.` : "") +
         (skipped.length ? ` Bỏ qua ${skipped.length} dòng: ${skipped.slice(0, 5).map((s) => `dòng ${s.line} (${s.reason})`).join(", ")}.` : ""),
     );
   };
 
+  const doImport = (mode: "replace" | "merge") => {
+    importText(paste, mode, "nội dung dán");
+    setPaste("");
+  };
+
+  const downloadTemplate = async () => {
+    const { default: writeExcelFile } = await import("write-excel-file/browser");
+    const rows = unitsToRows(project.units, Object.keys(project.unitTypes)[0]);
+    const data = rows.map((row, i) =>
+      i === 0 ? row.map((v) => ({ value: String(v ?? ""), fontWeight: "bold" as const, backgroundColor: "#FDF1F2" })) : row,
+    ) as SheetData;
+    await writeExcelFile(data, {
+      columns: [14, 10, 8, 8, 12, 14, 14, 20].map((width) => ({ width })),
+      stickyRowsCount: 1,
+    }).toFile(`${project.id || "du-an"}-danh-sach-can.xlsx`);
+  };
+
+  const uploadExcel = async (file: File) => {
+    try {
+      const { readSheet } = await import("read-excel-file/browser");
+      const rows = await readSheet(file);
+      importText(rowsToTable(rows as unknown[][]), "merge", `file ${file.name}`);
+    } catch {
+      setMessage("Không đọc được file. Hãy dùng file .xlsx (tải file mẫu ở trên, điền thêm căn rồi tải lên).");
+    }
+  };
+
   return (
     <>
+      <section className="card">
+        <h2>Tải lên file Excel</h2>
+        <p className="muted small">
+          Tải file mẫu (đã có sẵn các căn hiện tại), thêm căn mới vào cuối rồi tải lên. Căn mới sẽ được <strong>thêm vào</strong>,
+          căn trùng mã được cập nhật theo file, <strong>không xóa căn cũ</strong>.
+        </p>
+        <div className="actions">
+          <button type="button" onClick={downloadTemplate}>
+            ⬇ Tải file Excel mẫu
+          </button>
+          <label className="button primary">
+            ⬆ Tải lên file Excel
+            <input
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) uploadExcel(file);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        </div>
+        {message && <p className="notice ok">{message}</p>}
+      </section>
+
       <section className="card">
         <h2>Dán danh sách căn từ Excel</h2>
         <p className="muted small">
@@ -532,7 +606,6 @@ function UnitsTab({ project, update }: { project: Project; update: (p: Partial<P
             Sao chép danh sách hiện tại
           </button>
         </div>
-        {message && <p className="notice ok">{message}</p>}
       </section>
 
       <section className="card">

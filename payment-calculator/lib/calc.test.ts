@@ -5,6 +5,9 @@ import { defaultProjects as projects } from "../data/projects.ts";
 import { serenaRiverside as srn } from "../data/serena-riverside/index.ts";
 import { palmRiver as pr } from "../data/palm-river/index.ts";
 
+/** Căn mẫu trong sheet GIỎ HÀNG của file Palm River (TT 130 m², tim tường 145 m², 3PN) */
+const PR_10_10 = { code: "PR-10-10", type: "3PN", grossArea: 145, netArea: 130 };
+
 const unit = srn.units.find((u) => u.code === "A-04-01")!;
 const method = (id: string) => srn.methods.find((m) => m.id === id)!;
 
@@ -43,7 +46,9 @@ test("mọi PTTT của mọi dự án cộng đủ 100% tổng giá trị HĐMB"
     const u = project.units[0];
     for (const m of project.methods) {
       const q = computeQuote(project, m, {
-        listPrice: unitListPrice(project, u),
+        // Loại căn chưa có đơn giá tham khảo: dùng đơn giá cao nhất của dự án (như bước kiểm tra trong admin)
+        listPrice:
+          unitListPrice(project, u) || unitListPrice(project, u, Math.max(0, ...Object.values(project.defaultUnitPrice))),
         netArea: u.netArea,
       });
       assert.equal(q.mismatch, 0, `${project.id}/${m.id}`);
@@ -68,7 +73,7 @@ test("PTTT vay: ngân hàng giải ngân đúng tỷ lệ", () => {
 // (TT 130 m², đơn giá 168.000.000), Early Bird 1%, KH thân thiết 1%, CK sỉ 1,5%.
 // Excel không làm tròn, app làm tròn từng khoản nên cho phép lệch ≤ 2 đ.
 test("khớp bảng tạm tính Excel — Palm River, cả 4 PTTT", () => {
-  const u = pr.units[0];
+  const u = PR_10_10;
   const listPrice = unitListPrice(pr, u);
   assert.equal(listPrice, 21_840_000_000);
   const near = (actual: number[], expected: number[], label: string) => {
@@ -108,7 +113,7 @@ test("khớp bảng tạm tính Excel — Palm River, cả 4 PTTT", () => {
 });
 
 test("hạ chiết khấu PTTT theo khách, không vượt mức tối đa", () => {
-  const u = pr.units[0];
+  const u = PR_10_10;
   const m = pr.methods.find((x) => x.id === "pttt-chuan")!;
   const input = { listPrice: unitListPrice(pr, u), netArea: u.netArea, optionalDiscounts: { "early-bird": 0 } };
   const at = (methodDiscount?: number) => computeQuote(pr, m, { ...input, methodDiscount }).discounts.at(-1)?.percent;

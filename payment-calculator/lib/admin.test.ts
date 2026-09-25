@@ -76,3 +76,15 @@ test("không báo nhầm 'đợt âm' khi loại căn chưa có đơn giá tham 
   // Không có đơn giá nào: vẫn lưu được, không tự đoán giá để báo âm
   assert.deepEqual(validateProject({ ...project, defaultUnitPrice: {} }).errors, []);
 });
+
+test("file Excel mẫu đọc ngược lại ra đúng danh sách căn", async () => {
+  const { rowsToTable, unitsToRows } = await import("./importUnits.ts");
+  const units = [
+    { code: "CT3-10-1", type: "2PN", grossArea: 84.9, netArea: 75.8 },
+    { code: "B-06-02", type: "CH", bedrooms: "1+", bathrooms: 1, direction: "TB - ĐB", grossArea: 58.89, netArea: 53.06, price: 3_315_507_000 },
+  ];
+  // Mô phỏng ô Excel: số là number, ô trống là null
+  const back = parseUnitsTable(rowsToTable(unitsToRows(units)));
+  assert.deepEqual(JSON.parse(JSON.stringify(back.units)), units);
+  assert.deepEqual(back.skipped, []);
+});
