@@ -503,6 +503,74 @@ tfoot td {
   display: none;
 }
 
+/* ---------- Ô chọn mã căn ---------- */
+
+.unit-picker {
+  position: relative;
+}
+
+.unit-picker input {
+  width: 100%;
+}
+
+.suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+  min-width: 100%;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+}
+
+.suggestions li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.suggestions li strong,
+.suggestions li span {
+  white-space: nowrap;
+}
+
+.suggestions li span {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  text-align: right;
+}
+
+.suggestions li.active {
+  background: var(--brand-soft);
+}
+
+.suggestions li.active strong {
+  color: var(--brand);
+}
+
+.suggestions li.more {
+  display: block;
+  white-space: normal;
+  max-width: 360px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  cursor: default;
+}
+
 /* ---------- Trang chủ ---------- */
 
 .project-grid {

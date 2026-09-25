@@ -11,6 +11,7 @@ import {
   type Quote,
 } from "@/lib/calc.ts";
 import { fromPercentText, parseNumber, toPercentText } from "@/lib/numbers.ts";
+import UnitPicker, { normalizeCode } from "./UnitPicker";
 import type { PaymentMethod, Project, Unit } from "@/lib/types";
 
 type State = {
@@ -55,7 +56,7 @@ function stateFromUrl(project: Project): State {
   const q = new URLSearchParams(window.location.search);
   const s = initialState(project);
   const unit = q.get("u");
-  if (unit && (project.customUnits || project.units.some((u) => u.code === unit))) s.unitCode = unit;
+  if (unit && (project.customUnits || findUnit(project, unit))) s.unitCode = unit;
   if (project.customUnits) {
     const type = q.get("lc");
     if (type && project.unitTypes[type]) s.customType = type;
@@ -103,6 +104,16 @@ const digits = (v: string) => v.replace(/\D/g, "");
 
 const pricedAreaOf = (project: Project, u: Unit) => (project.priceArea === "net" ? u.netArea : u.grossArea);
 
+/** Tìm căn theo mã, bỏ qua hoa/thường, dấu gạch và khoảng trắng ("b0602" → B-06-02) */
+function findUnit(project: Project, code: string): Unit | undefined {
+  const q = normalizeCode(code);
+  if (!q) return undefined;
+  return (
+    project.units.find((u) => u.code.toLowerCase() === code.trim().toLowerCase()) ??
+    project.units.find((u) => normalizeCode(u.code) === q)
+  );
+}
+
 /** Căn nhân viên tự nhập; chỉ hợp lệ khi đã có diện tích dùng để tính giá */
 function customUnit(project: Project, s: State): Unit | undefined {
   const u: Unit = {
@@ -145,13 +156,28 @@ export default function Calculator({
   }, [advisor]);
 
   const listedUnit: Unit | undefined = state
-    ? project.units.find((u) => u.code.toLowerCase() === state.unitCode.trim().toLowerCase())
+    ? findUnit(project, state.unitCode)
     : undefined;
   const customMode = !!state && !listedUnit && !!project.customUnits;
   const unit: Unit | undefined = customMode ? customUnit(project, state) : listedUnit;
 
   const perM2 = state?.unitPrice ? Number(state.unitPrice) : undefined;
   const listPrice = unit ? unitListPrice(project, unit, perM2) : 0;
+
+  const unitOptions = useMemo(
+    () =>
+      project.units.map((u) => ({
+        code: u.code,
+        detail: [
+          project.unitTypes[u.type] ?? u.type,
+          u.bedrooms !== undefined ? `${u.bedrooms}PN` : "",
+          `${pricedAreaOf(project, u)} m²`,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      })),
+    [project],
+  );
 
   const quotes = useMemo(() => {
     if (!state || !unit || listPrice <= 0) return [];
@@ -273,31 +299,14 @@ export default function Calculator({
           </label>
           <label>
             Mã căn
-            <input
-              list="unit-codes"
+            <UnitPicker
               value={state.unitCode}
-              placeholder="VD: A-04-01"
-              onChange={(e) =>
-                update(
-                  project.customUnits
-                    ? { unitCode: e.target.value.toUpperCase() }
-                    : { unitCode: e.target.value.toUpperCase(), unitPrice: "" },
-                )
+              options={unitOptions}
+              allowCustom={project.customUnits}
+              onChange={(code) =>
+                update(project.customUnits ? { unitCode: code } : { unitCode: code, unitPrice: "" })
               }
             />
-            <datalist id="unit-codes">
-              {project.units.map((u) => (
-                <option key={u.code} value={u.code}>
-                  {[
-                    project.unitTypes[u.type] ?? u.type,
-                    u.bedrooms !== undefined ? `${u.bedrooms}PN` : "",
-                    `${pricedAreaOf(project, u)} m²`,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </option>
-              ))}
-            </datalist>
           </label>
           {customMode && (
             <>
