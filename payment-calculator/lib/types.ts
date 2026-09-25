@@ -121,4 +121,31 @@ export type Project = {
   units: Unit[];
   methods: PaymentMethod[];
   notes?: string[];
+  /** Thứ tự hiển thị trên trang chủ (nhỏ đứng trước) */
+  order?: number;
+  /** Ẩn khỏi danh sách trang chủ (vẫn mở được bằng link) */
+  hidden?: boolean;
+  /** Thời điểm lưu gần nhất (ISO), do hệ thống ghi */
+  updatedAt?: string;
 };
+
+/** Thông tin rút gọn để hiển thị danh sách dự án */
+export type ProjectSummary = Pick<
+  Project,
+  "id" | "name" | "developer" | "location" | "description" | "hidden" | "order" | "updatedAt"
+> & { unitCount: number; methodCount: number };
+
+export function summarize(p: Project): ProjectSummary {
+  return {
+    id: p.id,
+    name: p.name,
+    developer: p.developer,
+    location: p.location,
+    description: p.description,
+    hidden: p.hidden,
+    order: p.order,
+    updatedAt: p.updatedAt,
+    unitCount: p.units.length,
+    methodCount: p.methods.length,
+  };
+}

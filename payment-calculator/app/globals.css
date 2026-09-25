@@ -374,3 +374,331 @@ tfoot td {
     background: #fff;
   }
 }
+
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.project-card {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  margin: 0;
+  transition: border-color 0.15s;
+}
+
+.project-card:hover {
+  border-color: var(--accent);
+}
+
+/* ---------- Trang quản trị ---------- */
+
+.admin {
+  max-width: 1320px;
+}
+
+a {
+  color: var(--accent);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 500;
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.danger {
+  color: var(--warn);
+}
+
+button.link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+}
+
+textarea {
+  font: inherit;
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  resize: vertical;
+}
+
+code {
+  background: var(--bg);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+h3 {
+  margin: 20px 0 8px;
+  font-size: 15px;
+}
+
+.admin-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg);
+  padding: 8px 0;
+}
+
+.actions {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.actions.end {
+  justify-content: flex-end;
+}
+
+.actions form {
+  margin: 0;
+}
+
+.notice {
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin: 0 0 12px;
+}
+
+.notice.ok {
+  background: var(--accent-soft);
+}
+
+.notice.error {
+  background: #fbeae3;
+  color: var(--warn);
+}
+
+.issues {
+  width: 100%;
+  text-align: left;
+  margin-bottom: 8px;
+  color: var(--good);
+}
+
+.issues.has-errors {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+.issue-list {
+  margin: 0 0 16px;
+  padding: 12px 12px 12px 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.issue-list .error {
+  color: var(--warn);
+}
+
+.issue-list .warning {
+  color: var(--muted);
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.tabs button {
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: none;
+  white-space: nowrap;
+}
+
+.tabs button.active {
+  border-bottom-color: var(--accent);
+  color: var(--accent);
+}
+
+.grid .wide {
+  grid-column: 1 / -1;
+}
+
+label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+
+.edit-table td,
+.edit-table th {
+  padding: 5px 6px;
+}
+
+.edit-table input,
+.edit-table select,
+.edit-table textarea {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+.edit-table textarea {
+  min-width: 180px;
+}
+
+.edit-table .narrow,
+.edit-table input.narrow {
+  width: 80px;
+}
+
+.edit-table td.center {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.edit-table input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+.edit-table tr.bank {
+  background: var(--bank);
+}
+
+.edit-table.units input {
+  min-width: 90px;
+}
+
+.suffix {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.suffix input {
+  width: 100%;
+  min-width: 60px;
+}
+
+.suffix.narrow {
+  width: 100px;
+}
+
+.row-tools {
+  display: inline-flex;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.row-tools button {
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.row-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+
+.search {
+  max-width: 220px;
+}
+
+.pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 14px;
+}
+
+.chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.chip.add {
+  border-style: dashed;
+}
+
+.row-tools.labeled {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.milestones th {
+  white-space: normal;
+  min-width: 56px;
+  vertical-align: bottom;
+}
+
+.method-editor {
+  min-width: 0;
+}
+
+.login {
+  max-width: 380px;
+  margin: 10vh auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login h1 {
+  font-size: 22px;
+}
+
+
+.milestones td:nth-child(5) input {
+  min-width: 130px;
+}

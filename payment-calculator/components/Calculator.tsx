@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { projects, getProject } from "@/data/projects.ts";
 import {
   computeQuote,
   formatDate,
@@ -14,7 +13,6 @@ import {
 import type { PaymentMethod, Project, Unit } from "@/lib/types";
 
 type State = {
-  projectId: string;
   unitCode: string;
   /** Đơn giá/m² nhân viên nhập; rỗng = dùng giá mặc định */
   unitPrice: string;
@@ -30,7 +28,6 @@ const ADVISOR_KEY = "advisor";
 
 function initialState(project: Project): State {
   return {
-    projectId: project.id,
     unitCode: project.units[0]?.code ?? "",
     unitPrice: "",
     methodId: project.methods[0]?.id ?? "",
@@ -43,9 +40,8 @@ function initialState(project: Project): State {
 }
 
 /** Đọc trạng thái từ URL để nhân viên gửi link cho khách */
-function stateFromUrl(): State {
+function stateFromUrl(project: Project): State {
   const q = new URLSearchParams(window.location.search);
-  const project = getProject(q.get("p")) ?? projects[0];
   const s = initialState(project);
   const unit = q.get("u");
   if (unit && project.units.some((u) => u.code === unit)) s.unitCode = unit;
@@ -63,7 +59,6 @@ function stateFromUrl(): State {
 
 function stateToUrl(s: State): string {
   const q = new URLSearchParams();
-  q.set("p", s.projectId);
   if (s.unitCode) q.set("u", s.unitCode);
   if (s.unitPrice) q.set("dg", s.unitPrice);
   q.set("m", s.methodId);
@@ -75,18 +70,24 @@ function stateToUrl(s: State): string {
 
 const digits = (v: string) => v.replace(/\D/g, "");
 
-export default function Calculator() {
+export default function Calculator({
+  project,
+  projectList,
+}: {
+  project: Project;
+  projectList: { id: string; name: string }[];
+}) {
   const [state, setState] = useState<State | null>(null);
   const [advisor, setAdvisor] = useState({ name: "", phone: "" });
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    setState(stateFromUrl());
+    setState(stateFromUrl(project));
     try {
       const saved = localStorage.getItem(ADVISOR_KEY);
       if (saved) setAdvisor(JSON.parse(saved));
     } catch {}
-  }, []);
+  }, [project]);
 
   useEffect(() => {
     if (state) window.history.replaceState(null, "", stateToUrl(state));
@@ -98,7 +99,6 @@ export default function Calculator() {
     } catch {}
   }, [advisor]);
 
-  const project = state ? (getProject(state.projectId) ?? projects[0]) : projects[0];
   const unit: Unit | undefined = state
     ? project.units.find((u) => u.code.toLowerCase() === state.unitCode.trim().toLowerCase())
     : undefined;
@@ -162,10 +162,13 @@ export default function Calculator() {
           <label>
             Dự án
             <select
-              value={state.projectId}
-              onChange={(e) => setState({ ...initialState(getProject(e.target.value)!), customer: state.customer })}
+              value={project.id}
+              onChange={(e) => {
+                const q = state.customer ? `?kh=${encodeURIComponent(state.customer)}` : "";
+                window.location.href = `/${e.target.value}${q}`;
+              }}
             >
-              {projects.map((p) => (
+              {projectList.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>

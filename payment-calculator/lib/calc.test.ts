@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { computeQuote, unitListPrice } from "./calc.ts";
-import { projects } from "../data/projects.ts";
+import { defaultProjects as projects } from "../data/projects.ts";
 import { serenaRiverside as srn } from "../data/serena-riverside/index.ts";
 
 const unit = srn.units.find((u) => u.code === "A-04-01")!;

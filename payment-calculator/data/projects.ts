@@ -2,8 +2,9 @@ import type { Project } from "../lib/types";
 import { serenaRiverside } from "./serena-riverside/index.ts";
 
 /**
- * Danh sách dự án hiển thị trong app.
- * Thêm dự án mới: tạo thư mục data/<ten-du-an>/index.ts theo mẫu serena-riverside rồi thêm vào mảng này.
+ * Dữ liệu MẶC ĐỊNH — chỉ dùng khi Vercel Blob chưa có dữ liệu (lần chạy đầu / chạy local).
+ * Lần lưu đầu tiên trong trang /admin sẽ chép toàn bộ danh sách này lên Blob;
+ * từ đó mọi chỉnh sửa làm trong /admin, không cần sửa file này.
  */
 
 /** Dự án MẪU (dữ liệu minh họa) — ví dụ dự án có bảng giá cố định từng căn */
@@ -55,8 +56,7 @@ const sampleProject: Project = {
   ],
 };
 
-export const projects: Project[] = [serenaRiverside, sampleProject];
-
-export function getProject(id: string | null | undefined): Project | undefined {
-  return projects.find((p) => p.id === id);
-}
+export const defaultProjects: Project[] = [
+  { ...serenaRiverside, order: 1 },
+  { ...sampleProject, order: 99, hidden: true },
+];
