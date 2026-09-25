@@ -8,7 +8,7 @@ import { palmRiver as pr } from "../data/palm-river/index.ts";
 const unit = srn.units.find((u) => u.code === "A-04-01")!;
 const method = (id: string) => srn.methods.find((m) => m.id === id)!;
 
-// Số liệu đối chiếu lấy từ file Excel SRN_BẢNG TẠM TÍNH GIÁ_Final.xlsx
+// Số liệu đối chiếu lấy từ file Excel SRN_BẢNG TẠM TÍNH GIÁ_Final 2.xlsx
 // (căn A-04-01, đơn giá 60.000.000, CK sỉ 1%, Early Bird 1%, PTTTN 70%).
 test("khớp bảng tạm tính Excel — PTTTN 70%", () => {
   const listPrice = unitListPrice(srn, unit, 60_000_000);
@@ -32,7 +32,8 @@ test("khớp bảng tạm tính Excel — PTTTN 70%", () => {
   assert.equal(q.total, 3_450_891_651);
   assert.deepEqual(
     q.schedule.map((r) => r.amount),
-    [50_000_000, 119_454_859, 2_202_913_166, 909_068_767, 169_454_859],
+    // VBTT = 5% giá công bố − cọc (CHI TIẾT!F15)
+    [50_000_000, 124_960_000, 2_197_408_025, 909_068_767, 169_454_859],
   );
   assert.equal(q.mismatch, 0);
 });

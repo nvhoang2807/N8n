@@ -166,7 +166,9 @@ export function computeQuote(
       amount = total - cumulative;
     } else {
       const gross =
-        m.amount !== undefined ? m.amount : round(priceWithVat * (m.percent ?? 0));
+        m.amount !== undefined
+          ? m.amount
+          : round((m.percentBase === "list" ? listPrice : priceWithVat) * (m.percent ?? 0));
       amount = gross;
       if (m.deductAdvances) {
         amount -= pendingAdvances;

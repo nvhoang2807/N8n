@@ -823,7 +823,8 @@ function MethodEditor({
           </span>
         </div>
         <p className="muted small">
-          Tỷ lệ tính trên <strong>giá căn hộ gồm VAT (chưa phí bảo trì)</strong>. Cọc/VBTT đánh dấu “Ứng trước” sẽ được trừ vào
+          Tỷ lệ tính trên <strong>giá căn hộ gồm VAT (chưa phí bảo trì)</strong>, hoặc trên giá công bố (chưa CK, chưa VAT)
+          nếu chọn ở từng đợt. Cọc/VBTT đánh dấu “Ứng trước” sẽ được trừ vào
           đợt kế tiếp có đánh dấu “Trừ ứng trước” và không tính vào tổng 100%.
         </p>
         <div className="table-wrap">
@@ -862,6 +863,17 @@ function MethodEditor({
                       value={m.amount !== undefined ? undefined : m.percent}
                       onChange={(v) => setMilestone(i, { percent: v, amount: undefined })}
                     />
+                    {m.amount === undefined && (
+                      <select
+                        className="narrow"
+                        title="Tỷ lệ tính trên"
+                        value={m.percentBase ?? "withVat"}
+                        onChange={(e) => setMilestone(i, { percentBase: e.target.value === "list" ? "list" : undefined })}
+                      >
+                        <option value="withVat">trên giá gồm VAT</option>
+                        <option value="list">trên giá công bố</option>
+                      </select>
+                    )}
                   </td>
                   <td>
                     <NumberField

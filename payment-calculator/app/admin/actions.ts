@@ -4,7 +4,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { defaultProjects } from "@/data/projects.ts";
 import { login, logout, requireAdmin } from "@/lib/auth";
-import { deleteProject, PROJECTS_TAG, saveProject } from "@/lib/store";
+import { deleteProject, PROJECTS_TAG, readProjects, saveProject } from "@/lib/store";
 import type { Project } from "@/lib/types";
 import { validateProject } from "@/lib/validate.ts";
 
@@ -48,6 +48,18 @@ export async function deleteProjectAction(id: string): Promise<ActionResult> {
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
+}
+
+/** Cập nhật dự án theo cấu hình mới trong code (data/), giữ thứ tự và trạng thái ẩn/hiện hiện tại */
+export async function updateDefaultProjectAction(id: string): Promise<void> {
+  await requireAdmin();
+  const project = defaultProjects.find((p) => p.id === id);
+  if (!project) throw new Error(`Không có dự án mặc định "${id}".`);
+  const { projects } = await readProjects();
+  const current = projects.find((p) => p.id === id);
+  await saveProject({ ...project, order: current?.order ?? project.order, hidden: current?.hidden ?? project.hidden }, id);
+  refreshPublicPages();
+  revalidatePath("/admin");
 }
 
 /** Thêm một dự án có sẵn trong code (data/) nhưng chưa có trên Blob, ví dụ dự án mới được bổ sung */

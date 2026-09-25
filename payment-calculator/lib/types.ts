@@ -37,8 +37,10 @@ export type Milestone = {
   /** Thời điểm thanh toán hiển thị cho khách */
   due: string;
   note?: string;
-  /** Tỷ lệ trên Giá trị căn hộ gồm VAT (chưa phí bảo trì) */
+  /** Tỷ lệ trên Giá trị căn hộ gồm VAT (chưa phí bảo trì), hoặc trên giá công bố nếu percentBase = "list" */
   percent?: number;
+  /** Cơ sở tính tỷ lệ: "withVat" (mặc định) hoặc "list" = giá công bố chưa CK, chưa VAT */
+  percentBase?: "withVat" | "list";
   /** Số tiền cố định (VND), ví dụ tiền cọc */
   amount?: number;
   /**
@@ -142,6 +144,23 @@ export type Project = {
   /** Thời điểm lưu gần nhất (ISO), do hệ thống ghi */
   updatedAt?: string;
 };
+
+/** So sánh cấu hình tính giá, bỏ qua thứ tự hiển thị, ẩn/hiện và thời điểm lưu */
+export function sameConfig(a: Project, b: Project): boolean {
+  const stable = (v: unknown): unknown =>
+    Array.isArray(v)
+      ? v.map(stable)
+      : v && typeof v === "object"
+        ? Object.fromEntries(
+            Object.entries(v)
+              .filter(([, x]) => x !== undefined)
+              .sort(([x], [y]) => x.localeCompare(y))
+              .map(([k, x]) => [k, stable(x)]),
+          )
+        : v;
+  const strip = ({ updatedAt: _u, order: _o, hidden: _h, ...rest }: Project) => JSON.stringify(stable(rest));
+  return strip(a) === strip(b);
+}
 
 /** Thông tin rút gọn để hiển thị danh sách dự án */
 export type ProjectSummary = Pick<

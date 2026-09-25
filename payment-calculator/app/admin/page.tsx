@@ -5,7 +5,9 @@ import LoginForm from "@/components/admin/LoginForm";
 import { adminConfigured, isAdmin } from "@/lib/auth";
 import { blobEnabled, readProjects } from "@/lib/store";
 import { defaultProjects } from "@/data/projects.ts";
-import { addDefaultProjectAction, logoutAction } from "./actions";
+import ConfirmButton from "@/components/admin/ConfirmButton";
+import { sameConfig } from "@/lib/types";
+import { addDefaultProjectAction, logoutAction, updateDefaultProjectAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Quản trị dự án", robots: { index: false } };
@@ -36,6 +38,13 @@ export default async function AdminPage() {
   const blobReady = blobEnabled();
   const available =
     source === "blob" ? defaultProjects.filter((d) => !projects.some((p) => p.id === d.id)) : [];
+  const outdated =
+    source === "blob"
+      ? defaultProjects.filter((d) => {
+          const current = projects.find((p) => p.id === d.id);
+          return current && !sameConfig(current, d);
+        })
+      : [];
 
   return (
     <main className="page admin">
@@ -77,6 +86,28 @@ export default async function AdminPage() {
             {available.map((p) => (
               <form key={p.id} action={addDefaultProjectAction.bind(null, p.id)}>
                 <button className="primary">+ Thêm {p.name}</button>
+              </form>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {outdated.length > 0 && (
+        <section className="card">
+          <h2>Cấu hình mới từ file Excel</h2>
+          <p className="muted small">
+            Cách tính trong app đã được cập nhật theo file Excel mới nhưng dự án dưới đây vẫn đang dùng bản cũ. Bấm cập nhật
+            để áp dụng (các chỉnh sửa đã làm trong admin cho dự án đó sẽ bị thay thế).
+          </p>
+          <div className="actions">
+            {outdated.map((p) => (
+              <form key={p.id} action={updateDefaultProjectAction.bind(null, p.id)}>
+                <ConfirmButton
+                  className="primary"
+                  message={`Cập nhật ${p.name} theo cấu hình mới? Các chỉnh sửa trong admin của dự án này sẽ bị thay thế.`}
+                >
+                  ↻ Cập nhật {p.name}
+                </ConfirmButton>
               </form>
             ))}
           </div>

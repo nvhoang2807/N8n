@@ -27,8 +27,9 @@ function head(firstPercent: number): Milestone[] {
     {
       label: "VBTT",
       due: "Ký Văn bản Thỏa thuận (trong vòng 7 ngày kể từ ngày cọc)",
-      note: "Tương đương 5% giá trị căn hộ",
+      note: "Tương đương với 5% giá trị căn hộ (Chưa gồm VAT và chưa phí bảo trì)",
       percent: 0.05,
+      percentBase: "list",
       advance: true,
       deductAdvances: true,
     },
@@ -144,7 +145,7 @@ export const serenaRiverside: Project = {
     {
       id: "early-bird",
       label: "Chiết khấu Early Bird",
-      options: [0, 0.01],
+      options: [0, 0.01, 0.015],
       default: 0,
       base: "list",
     },
