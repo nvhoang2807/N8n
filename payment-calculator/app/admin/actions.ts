@@ -57,7 +57,16 @@ export async function updateDefaultProjectAction(id: string): Promise<void> {
   if (!project) throw new Error(`Không có dự án mặc định "${id}".`);
   const { projects } = await readProjects();
   const current = projects.find((p) => p.id === id);
-  await saveProject({ ...project, order: current?.order ?? project.order, hidden: current?.hidden ?? project.hidden }, id);
+  await saveProject(
+    {
+      ...project,
+      order: current?.order ?? project.order,
+      hidden: current?.hidden ?? project.hidden,
+      color: current?.color ?? project.color,
+      image: current?.image ?? project.image,
+    },
+    id,
+  );
   refreshPublicPages();
   revalidatePath("/admin");
 }

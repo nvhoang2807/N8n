@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { projectColorVars } from "@/lib/color.ts";
 import { loadProjects } from "@/lib/store";
 
 export const revalidate = 3600;
@@ -15,7 +16,13 @@ export default async function Home() {
       {projects.length === 0 && <p className="muted">Chưa có dự án nào.</p>}
       <div className="project-grid">
         {projects.map((p) => (
-          <Link key={p.id} href={`/${p.id}`} className="card project-card">
+          <Link
+            key={p.id}
+            href={`/${p.id}`}
+            className="card project-card"
+            style={projectColorVars(p.color)}
+          >
+            {p.image && <img src={p.image} alt="" className="project-thumb" />}
             <h2>{p.name}</h2>
             <p className="muted">
               {[p.developer, p.location].filter(Boolean).join(" · ")}

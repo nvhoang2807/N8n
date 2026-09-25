@@ -10,6 +10,7 @@ import {
   unitListPrice,
   type Quote,
 } from "@/lib/calc.ts";
+import { projectColorVars } from "@/lib/color.ts";
 import { fromPercentText, parseNumber, toPercentText } from "@/lib/numbers.ts";
 import UnitPicker, { normalizeCode } from "./UnitPicker";
 import type { PaymentMethod, Project, Unit } from "@/lib/types";
@@ -265,14 +266,17 @@ export default function Calculator({
   };
 
   return (
-    <main className="page">
+    <main className="page" style={projectColorVars(project.color)}>
       <header className="top hero">
-        <div>
-          <p className="eyebrow">Bảng tạm tính chi tiết giá trị HĐMB</p>
-          <h1>{project.name}</h1>
-          <p className="muted">
-            {[project.developer, project.description].filter(Boolean).join(" · ")}
-          </p>
+        <div className="hero-title">
+          {project.image && <img src={project.image} alt="" className="project-avatar" />}
+          <div>
+            <p className="eyebrow">Bảng tạm tính chi tiết giá trị HĐMB</p>
+            <h1>{project.name}</h1>
+            <p className="muted">
+              {[project.developer, project.description].filter(Boolean).join(" · ")}
+            </p>
+          </div>
         </div>
         <div className="actions no-print">
           <button onClick={copyLink}>{copied ? "Đã sao chép ✓" : "Sao chép link"}</button>

@@ -129,6 +129,10 @@ export type Project = {
   customUnits?: boolean;
   /** Tên dòng tổng giá trị hiển thị cho khách. Mặc định "Tổng giá trị HĐMB" */
   totalLabel?: string;
+  /** Màu thương hiệu riêng cho dự án (mã hex, VD "#0f6b4f"). Không đặt thì dùng màu mặc định của trang. */
+  color?: string;
+  /** Ảnh đại diện dự án — ảnh nhỏ (data URL) do nhân viên tải lên trong admin. */
+  image?: string;
   /** Cho nhân viên hạ chiết khấu PTTT theo từng khách (không vượt mức cấu hình) */
   adjustableMethodDiscount?: boolean;
   /** Đơn giá tiền sử dụng đất (VND/m² thông thủy), trừ khỏi cơ sở tính VAT */
@@ -158,7 +162,9 @@ export function sameConfig(a: Project, b: Project): boolean {
               .map(([k, x]) => [k, stable(x)]),
           )
         : v;
-  const strip = ({ updatedAt: _u, order: _o, hidden: _h, ...rest }: Project) => JSON.stringify(stable(rest));
+  // color/image là tùy chỉnh riêng của từng dự án trên admin, không thuộc "cấu hình tính giá" nên bỏ qua khi so sánh
+  const strip = ({ updatedAt: _u, order: _o, hidden: _h, color: _c, image: _i, ...rest }: Project) =>
+    JSON.stringify(stable(rest));
   return strip(a) === strip(b);
 }
 

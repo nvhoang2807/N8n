@@ -11,6 +11,7 @@ import type { Discount, Loan, Milestone, OptionalDiscount, PaymentMethod, Projec
 import { validateProject } from "@/lib/validate.ts";
 import type { SheetData } from "write-excel-file/browser";
 import { move, NumberField, PercentField, PercentListField, RowTools } from "./fields";
+import { fileToCompressedDataUrl, ImageTooLargeError } from "@/lib/imageUpload.ts";
 
 type Tab = "general" | "units" | "methods";
 
@@ -164,6 +165,8 @@ export default function ProjectEditor({
 
 /* ---------------- Thông tin chung ---------------- */
 
+const DEFAULT_COLOR = "#be1e2d";
+
 function GeneralTab({
   project,
   update,
@@ -173,6 +176,22 @@ function GeneralTab({
   update: (p: Partial<Project>) => void;
   isNew: boolean;
 }) {
+  const [imageBusy, setImageBusy] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+
+  const onPickImage = async (file: File | undefined) => {
+    if (!file) return;
+    setImageError(null);
+    setImageBusy(true);
+    try {
+      update({ image: await fileToCompressedDataUrl(file) });
+    } catch (e) {
+      setImageError(e instanceof ImageTooLargeError || e instanceof Error ? e.message : "Không tải được ảnh.");
+    } finally {
+      setImageBusy(false);
+    }
+  };
+
   const types = Object.keys(project.unitTypes);
 
   const setTypes = (rows: { code: string; label: string; price?: number }[]) =>
@@ -246,6 +265,62 @@ function GeneralTab({
           <label className="check">
             <input type="checkbox" checked={!!project.hidden} onChange={(e) => update({ hidden: e.target.checked })} />
             Ẩn khỏi trang chủ (vẫn xem được bằng link)
+          </label>
+        </div>
+      </section>
+
+      <section className="card">
+        <h2>Màu & ảnh đại diện</h2>
+        <div className="grid">
+          <label>
+            Màu thương hiệu dự án
+            <div className="color-field">
+              <input
+                type="color"
+                value={project.color ?? DEFAULT_COLOR}
+                onChange={(e) => update({ color: e.target.value })}
+              />
+              <input
+                className="color-hex"
+                value={project.color ?? ""}
+                placeholder={DEFAULT_COLOR}
+                onChange={(e) => update({ color: e.target.value || undefined })}
+              />
+              {project.color && (
+                <button type="button" onClick={() => update({ color: undefined })}>
+                  Dùng màu mặc định
+                </button>
+              )}
+            </div>
+            <small className="muted">Dùng cho khung tiêu đề và thẻ dự án ở trang chủ. Không chọn thì dùng màu mặc định.</small>
+          </label>
+          <label>
+            Ảnh đại diện dự án
+            <div className="image-field">
+              {project.image && <img src={project.image} alt="" className="image-preview" />}
+              <div className="actions">
+                <label className="button">
+                  {imageBusy ? "Đang xử lý…" : project.image ? "Đổi ảnh" : "Tải ảnh lên"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    disabled={imageBusy}
+                    onChange={(e) => {
+                      onPickImage(e.target.files?.[0]);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                {project.image && (
+                  <button type="button" onClick={() => update({ image: undefined })}>
+                    Xóa ảnh
+                  </button>
+                )}
+              </div>
+            </div>
+            {imageError && <small className="warn">{imageError}</small>}
+            <small className="muted">Hiện ở thẻ dự án trang chủ và khung tiêu đề. Ảnh sẽ được tự động thu nhỏ.</small>
           </label>
         </div>
       </section>
