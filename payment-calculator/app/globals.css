@@ -511,6 +511,38 @@ tfoot td {
 
 .unit-picker input {
   width: 100%;
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+.unit-picker.open input,
+.unit-picker input:focus {
+  cursor: text;
+}
+
+.picker-toggle {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  width: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 0 10px 10px 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  transition: transform 0.15s;
+}
+
+.picker-toggle:hover {
+  background: transparent;
+  color: var(--brand);
+}
+
+.unit-picker.open .picker-toggle {
+  transform: rotate(180deg);
 }
 
 .suggestions {
@@ -558,6 +590,11 @@ tfoot td {
 }
 
 .suggestions li.active strong {
+  color: var(--brand);
+}
+
+.suggestions li.current strong::after {
+  content: " ✓";
   color: var(--brand);
 }
 

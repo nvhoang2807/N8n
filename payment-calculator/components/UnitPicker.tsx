@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 
 export type UnitOption = { code: string; detail: string };
 
@@ -9,7 +9,11 @@ const MAX_SHOWN = 5;
 /** Bỏ dấu gạch, khoảng trắng để "a0401" khớp "A-04-01" */
 export const normalizeCode = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-/** Ô nhập mã căn kèm gợi ý: gõ để lọc, chỉ hiện tối đa 5 căn khớp nhất */
+/**
+ * Ô mã căn dạng xổ xuống: bấm vào là hiện tối đa 5 căn, gõ mã để lọc.
+ * Mở ra lần đầu hiện các căn đầu danh sách (không lọc theo mã đang chọn),
+ * chỉ lọc khi người dùng bắt đầu gõ.
+ */
 export default function UnitPicker({
   value,
   options,
@@ -23,11 +27,14 @@ export default function UnitPicker({
   allowCustom?: boolean;
 }) {
   const listId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  /** null = vừa mở, chưa gõ gì → chưa lọc */
+  const [query, setQuery] = useState<string | null>(null);
 
   const matches = useMemo(() => {
-    const q = normalizeCode(value);
+    const q = normalizeCode(query ?? "");
     if (!q) return options;
     const starts: UnitOption[] = [];
     const contains: UnitOption[] = [];
@@ -37,12 +44,16 @@ export default function UnitPicker({
       else if (c.includes(q)) contains.push(o);
     }
     return [...starts, ...contains];
-  }, [value, options]);
+  }, [query, options]);
 
   const shown = matches.slice(0, MAX_SHOWN);
-  const exact = !!value.trim() && options.some((o) => normalizeCode(o.code) === normalizeCode(value));
-  // Đã chọn đúng một căn thì không cần mở gợi ý nữa
-  const visible = open && !(exact && matches.length === 1);
+
+  const openList = () => {
+    setQuery(null);
+    setOpen(true);
+    const current = options.findIndex((o) => normalizeCode(o.code) === normalizeCode(value));
+    setActive(current >= 0 && current < MAX_SHOWN ? current : 0);
+  };
 
   const choose = (code: string) => {
     onChange(code);
@@ -50,20 +61,21 @@ export default function UnitPicker({
   };
 
   return (
-    <div className="unit-picker">
+    <div className={`unit-picker${open ? " open" : ""}`}>
       <input
+        ref={inputRef}
         role="combobox"
-        aria-expanded={visible}
+        aria-expanded={open}
         aria-controls={listId}
         aria-autocomplete="list"
         autoComplete="off"
         value={value}
-        placeholder={options[0] ? `Gõ để tìm, VD: ${options[0].code}` : "Nhập mã căn"}
+        placeholder="Chọn hoặc nhập mã căn"
         onFocus={(e) => {
           e.target.select();
-          setOpen(true);
-          setActive(0);
+          openList();
         }}
+        onClick={() => !open && openList()}
         onBlur={() => {
           setOpen(false);
           // Đưa mã gõ tắt ("b0602") về đúng mã căn ("B-06-02")
@@ -71,19 +83,21 @@ export default function UnitPicker({
           if (hit && hit.code !== value) onChange(hit.code);
         }}
         onChange={(e) => {
-          onChange(e.target.value.toUpperCase());
+          const v = e.target.value.toUpperCase();
+          onChange(v);
+          setQuery(v);
           setOpen(true);
           setActive(0);
         }}
         onKeyDown={(e) => {
           if (e.key === "ArrowDown" || e.key === "ArrowUp") {
             e.preventDefault();
-            setOpen(true);
+            if (!open) return openList();
             if (shown.length) {
               const step = e.key === "ArrowDown" ? 1 : -1;
               setActive((a) => (a + step + shown.length) % shown.length);
             }
-          } else if (e.key === "Enter" && visible && shown[active]) {
+          } else if (e.key === "Enter" && open && shown[active]) {
             e.preventDefault();
             choose(shown[active].code);
           } else if (e.key === "Escape") {
@@ -91,15 +105,31 @@ export default function UnitPicker({
           }
         }}
       />
-      {visible && (
+      <button
+        type="button"
+        className="picker-toggle"
+        tabIndex={-1}
+        aria-label={open ? "Đóng danh sách căn" : "Mở danh sách căn"}
+        // mousedown để không làm ô nhập mất focus
+        onMouseDown={(e) => {
+          e.preventDefault();
+          if (open) setOpen(false);
+          else {
+            inputRef.current?.focus();
+            openList();
+          }
+        }}
+      >
+        ▾
+      </button>
+      {open && (
         <ul className="suggestions" id={listId} role="listbox">
           {shown.map((o, i) => (
             <li
               key={o.code}
               role="option"
               aria-selected={i === active}
-              className={i === active ? "active" : ""}
-              // mousedown để chọn trước khi ô nhập mất focus
+              className={[i === active ? "active" : "", o.code === value ? "current" : ""].join(" ").trim()}
               onMouseDown={(e) => {
                 e.preventDefault();
                 choose(o.code);
@@ -112,7 +142,7 @@ export default function UnitPicker({
           ))}
           {matches.length > MAX_SHOWN && (
             <li className="more" aria-disabled>
-              Còn {matches.length - MAX_SHOWN} căn khác — gõ thêm để lọc
+              Còn {matches.length - MAX_SHOWN} căn khác — gõ mã căn để lọc
             </li>
           )}
           {matches.length === 0 && (
@@ -120,6 +150,11 @@ export default function UnitPicker({
               {allowCustom
                 ? "Căn ngoài danh sách — điền loại căn, diện tích và đơn giá ở các ô bên cạnh"
                 : "Không có mã căn phù hợp"}
+            </li>
+          )}
+          {allowCustom && matches.length > 0 && (
+            <li className="more" aria-disabled>
+              Căn khác: gõ mã căn rồi điền loại căn, diện tích, đơn giá
             </li>
           )}
         </ul>
