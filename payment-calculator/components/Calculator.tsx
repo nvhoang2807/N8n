@@ -139,7 +139,7 @@ export default function Calculator({
 
   return (
     <main className="page">
-      <header className="top">
+      <header className="top hero">
         <div>
           <p className="eyebrow">Bảng tạm tính chi tiết giá trị HĐMB</p>
           <h1>{project.name}</h1>
@@ -157,7 +157,9 @@ export default function Calculator({
       </header>
 
       <section className="card no-print">
-        <h2>1. Chọn dự án & căn hộ</h2>
+        <h2>
+          <span className="step">1</span>Chọn dự án & căn hộ
+        </h2>
         <div className="grid">
           <label>
             Dự án
@@ -243,7 +245,9 @@ export default function Calculator({
 
       {quotes.length > 0 && (
         <section className="card no-print">
-          <h2>2. So sánh phương thức thanh toán</h2>
+          <h2>
+            <span className="step">2</span>So sánh phương thức thanh toán
+          </h2>
           <p className="muted">
             Bấm vào một PTTT để xem chi tiết. “Tiết kiệm” so với PTTT có tổng giá trị HĐMB cao nhất.
           </p>
@@ -259,7 +263,7 @@ export default function Calculator({
         <>
           <section className="card">
             <h2>
-              <span className="no-print">3. </span>Chi tiết giá trị — {selected.method.name}
+              <span className="step no-print">3</span>Chi tiết giá trị — {selected.method.name}
             </h2>
             <p className="muted">{selected.method.summary}</p>
             <Breakdown project={project} quote={selected.quote} />
@@ -439,7 +443,7 @@ function Breakdown({ project, quote }: { project: Project; quote: Quote }) {
         </table>
       </div>
       <div className="kpis">
-        <div>
+        <div className="kpi-main">
           <span>Tổng giá trị HĐMB</span>
           <strong>{formatShort(quote.total)}</strong>
         </div>
