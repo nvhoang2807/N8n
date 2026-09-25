@@ -557,17 +557,32 @@ tfoot td {
   text-decoration: underline;
 }
 
+/* Khi xuất ảnh (Tải hình): giống bản in */
+html.capturing .no-print {
+  display: none !important;
+}
+
+html.capturing .print-only {
+  display: block;
+}
+
+/* Ảnh luôn xuất theo khổ cố định, không phụ thuộc màn hình */
+html.capturing body {
+  width: 820px;
+  min-width: 820px;
+}
+
 @media screen and (max-width: 600px) {
-  /* Bảng dạng thẻ trên điện thoại */
-  table.stack thead {
+  /* Bảng dạng thẻ trên điện thoại (không áp dụng khi xuất ảnh) */
+  html:not(.capturing) table.stack thead {
     display: none;
   }
-  table.stack tr {
+  html:not(.capturing) table.stack tr {
     display: block;
     padding: 12px 0;
     border-bottom: 1px solid var(--border);
   }
-  table.stack td {
+  html:not(.capturing) table.stack td {
     display: flex;
     justify-content: space-between;
     gap: 12px;
@@ -575,66 +590,77 @@ tfoot td {
     border: none;
     text-align: right;
   }
-  table.stack td:first-child,
-  table.stack td.due {
+  html:not(.capturing) table.stack td:first-child,
+  html:not(.capturing) table.stack td.due {
     display: block;
     text-align: left;
   }
-  table.stack td[data-label]::before {
+  html:not(.capturing) table.stack td[data-label]::before {
     content: attr(data-label);
     color: var(--muted);
     font-weight: 400;
     text-align: left;
   }
-  table.stack td.amount {
+  html:not(.capturing) table.stack td.amount {
     font-weight: 700;
   }
-  table.stack tfoot tr {
+  html:not(.capturing) table.stack tfoot tr {
     border-top: 2px solid var(--brand);
     border-bottom: none;
   }
-  table.stack tfoot td:first-child {
+  html:not(.capturing) table.stack tfoot td:first-child {
     display: none;
   }
-  table.stack tfoot td {
+  html:not(.capturing) table.stack tfoot td {
     border-top: none;
   }
-  .compare tbody tr.selected {
+  html:not(.capturing) .compare tbody tr.selected {
     padding-left: 10px;
     border-radius: 8px;
   }
 
-  .page {
+  html:not(.capturing) .page {
     padding-top: 16px;
   }
-  .brand img {
+  html:not(.capturing) .brand img {
     height: 34px;
   }
-  .site-tagline {
+  html:not(.capturing) .site-tagline {
     display: none;
   }
-  .hero {
+  html:not(.capturing) .hero {
     padding: 24px 20px;
     border-radius: 14px;
   }
-  .hero h1 {
+  html:not(.capturing) .hero h1 {
     font-size: 26px;
   }
-  h1 {
+  html:not(.capturing) h1 {
     font-size: 22px;
   }
-  .card {
+  html:not(.capturing) .card {
     padding: 18px;
     border-radius: 14px;
   }
-  .kpis strong {
+  html:not(.capturing) .kpis strong {
     font-size: 19px;
   }
-  .actions {
+  html:not(.capturing) .actions {
     width: 100%;
   }
-  .actions button {
+  html:not(.capturing) .actions button {
     flex: 1;
+  }
+  html:not(.capturing) .hero .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  html:not(.capturing) .hero .actions button {
+    white-space: nowrap;
+    padding: 10px 12px;
+  }
+  html:not(.capturing) .hero .actions button.primary {
+    grid-column: 1 / -1;
   }
 }
 

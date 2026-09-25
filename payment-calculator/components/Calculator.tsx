@@ -80,6 +80,7 @@ export default function Calculator({
   const [state, setState] = useState<State | null>(null);
   const [advisor, setAdvisor] = useState({ name: "", phone: "" });
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setState(stateFromUrl(project));
@@ -137,6 +138,43 @@ export default function Calculator({
     } catch {}
   };
 
+  // Xuất ảnh PNG giống bản in: chỉ căn hộ + PTTT đang chọn, ẩn ô nhập và bảng so sánh
+  const saveImage = async () => {
+    if (saving) return;
+    setSaving(true);
+    const root = document.documentElement;
+    root.classList.add("capturing");
+    try {
+      const { toBlob } = await import("html-to-image");
+      const blob = await toBlob(document.body, {
+        pixelRatio: 2,
+        backgroundColor: getComputedStyle(document.body).backgroundColor,
+      });
+      if (!blob) throw new Error("empty image");
+      const name = [project.id, unit?.code, selected?.method.name]
+        .filter(Boolean)
+        .join("-")
+        .replace(/[^\p{L}\p{N}-]+/gu, "-")
+        .replace(/^-+|-+$/g, "");
+      const file = new File([blob], `${name}.png`, { type: "image/png" });
+      if (window.matchMedia("(pointer: coarse)").matches && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: file.name }).catch(() => {});
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file.name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+    } catch {
+      alert("Không tạo được hình, vui lòng thử lại hoặc dùng In / Lưu PDF.");
+    } finally {
+      root.classList.remove("capturing");
+      setSaving(false);
+    }
+  };
+
   return (
     <main className="page">
       <header className="top hero">
@@ -150,6 +188,11 @@ export default function Calculator({
         </div>
         <div className="actions no-print">
           <button onClick={copyLink}>{copied ? "Đã sao chép ✓" : "Sao chép link"}</button>
+          {selected && (
+            <button onClick={saveImage} disabled={saving}>
+              {saving ? "Đang tạo hình…" : "Tải hình"}
+            </button>
+          )}
           <button className="primary" onClick={() => window.print()}>
             In / Lưu PDF
           </button>
