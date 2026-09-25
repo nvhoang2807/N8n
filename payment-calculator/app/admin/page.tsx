@@ -4,7 +4,8 @@ import DeleteProjectButton from "@/components/admin/DeleteProjectButton";
 import LoginForm from "@/components/admin/LoginForm";
 import { adminConfigured, isAdmin } from "@/lib/auth";
 import { blobEnabled, readProjects } from "@/lib/store";
-import { logoutAction } from "./actions";
+import { defaultProjects } from "@/data/projects.ts";
+import { addDefaultProjectAction, logoutAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Quản trị dự án", robots: { index: false } };
@@ -33,6 +34,8 @@ export default async function AdminPage() {
 
   const { projects, source } = await readProjects();
   const blobReady = blobEnabled();
+  const available =
+    source === "blob" ? defaultProjects.filter((d) => !projects.some((p) => p.id === d.id)) : [];
 
   return (
     <main className="page admin">
@@ -64,6 +67,20 @@ export default async function AdminPage() {
         <p className="notice ok">
           Đang dùng dữ liệu mặc định. Lần lưu đầu tiên sẽ tự chép toàn bộ dự án lên Vercel Blob.
         </p>
+      )}
+
+      {available.length > 0 && (
+        <section className="card">
+          <h2>Dự án có sẵn chưa được thêm</h2>
+          <p className="muted small">Dự án đã được cấu hình sẵn nhưng chưa có trong danh sách đang dùng.</p>
+          <div className="actions">
+            {available.map((p) => (
+              <form key={p.id} action={addDefaultProjectAction.bind(null, p.id)}>
+                <button className="primary">+ Thêm {p.name}</button>
+              </form>
+            ))}
+          </div>
+        </section>
       )}
 
       <section className="card">

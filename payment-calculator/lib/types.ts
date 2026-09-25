@@ -2,12 +2,13 @@
  * Mô hình dữ liệu cho bảng tạm tính giá trị HĐMB.
  *
  * Trình tự tính (khớp bảng tạm tính Excel của chủ đầu tư):
- *  (1) Giá công bố = đơn giá × DT tim tường (hoặc giá căn nhập sẵn) — chưa VAT, chưa phí bảo trì
+ *  (1) Giá công bố = đơn giá × DT tim tường (hoặc thông thủy, xem priceArea; hoặc giá căn nhập sẵn)
+ *      — chưa VAT, chưa phí bảo trì
  *  (2) Trừ các chiết khấu → Giá sau chiết khấu (chưa VAT)
  *  (3) Tiền sử dụng đất = DT thông thủy × đơn giá tiền SDĐ (không chịu VAT)
  *  (4) VAT = (Giá sau CK − tiền SDĐ) × 10%
  *  (5) Giá trị căn hộ gồm VAT = Giá sau CK + VAT
- *  (6) Phí bảo trì = Giá sau CK × 2%
+ *  (6) Phí bảo trì = Giá sau CK × 2% (hoặc Giá công bố × 2%, xem maintenanceBase)
  *  (7) Tổng giá trị HĐMB = (5) + (6)
  */
 
@@ -113,8 +114,19 @@ export type Project = {
   defaultUnitPrice: Record<string, number>;
   /** Thuế suất VAT, ví dụ 0.1 */
   vatRate: number;
-  /** Tỷ lệ phí bảo trì trên giá sau chiết khấu chưa VAT, ví dụ 0.02 */
+  /** Tỷ lệ phí bảo trì, ví dụ 0.02 */
   maintenanceRate: number;
+  /**
+   * Cơ sở tính phí bảo trì. "net" (mặc định): giá sau chiết khấu chưa VAT;
+   * "list": giá công bố trước chiết khấu.
+   */
+  maintenanceBase?: "net" | "list";
+  /** Diện tích nhân với đơn giá để ra giá công bố. Mặc định "gross" (tim tường) */
+  priceArea?: "gross" | "net";
+  /** Cho nhân viên nhập căn không có trong danh sách (tự điền loại, diện tích, đơn giá) */
+  customUnits?: boolean;
+  /** Cho nhân viên hạ chiết khấu PTTT theo từng khách (không vượt mức cấu hình) */
+  adjustableMethodDiscount?: boolean;
   /** Đơn giá tiền sử dụng đất (VND/m² thông thủy), trừ khỏi cơ sở tính VAT */
   landValuePerM2?: number;
   optionalDiscounts: OptionalDiscount[];

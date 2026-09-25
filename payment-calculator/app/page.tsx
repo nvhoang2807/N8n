@@ -18,8 +18,7 @@ export default async function Home() {
           <Link key={p.id} href={`/${p.id}`} className="card project-card">
             <h2>{p.name}</h2>
             <p className="muted">
-              {p.developer}
-              {p.location ? ` · ${p.location}` : ""}
+              {[p.developer, p.location].filter(Boolean).join(" · ")}
             </p>
             {p.description && <p className="small">{p.description}</p>}
             <div className="stats">

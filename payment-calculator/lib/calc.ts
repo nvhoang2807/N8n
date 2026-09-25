@@ -63,6 +63,8 @@ export type QuoteInput = {
   optionalDiscounts?: Record<string, number>;
   /** Ngày ký HĐMB dự kiến — để ước tính ngày các đợt */
   contractDate?: Date;
+  /** Chiết khấu PTTT áp dụng cho khách (thay mức của chiết khấu đầu tiên trong PTTT) */
+  methodDiscount?: number;
   /** Ghi đè giả định khoản vay */
   rateAfter?: number;
   termYears?: number;
@@ -91,14 +93,19 @@ function dueDate(contractDate?: Date, months?: number, days?: number): Date | un
   return undefined;
 }
 
+/** Diện tích dùng để tính giá công bố của dự án */
+export function pricedArea(project: Project, unit: { grossArea: number; netArea: number }): number {
+  return project.priceArea === "net" ? unit.netArea : unit.grossArea;
+}
+
 export function unitListPrice(
   project: Project,
-  unit: { type: string; grossArea: number; price?: number },
+  unit: { type: string; grossArea: number; netArea: number; price?: number },
   unitPrice?: number,
 ): number {
   if (unitPrice === undefined && unit.price !== undefined) return unit.price;
   const perM2 = unitPrice ?? project.defaultUnitPrice[unit.type] ?? 0;
-  return round(unit.grossArea * perM2);
+  return round(pricedArea(project, unit) * perM2);
 }
 
 export function computeQuote(
@@ -116,7 +123,13 @@ export function computeQuote(
         base: d.base,
       }))
       .filter((d) => d.percent > 0),
-    ...method.discounts.filter((d) => d.percent > 0),
+    ...method.discounts
+      .map((d, i) =>
+        i === 0 && input.methodDiscount !== undefined
+          ? { ...d, percent: Math.min(Math.max(input.methodDiscount, 0), d.percent) }
+          : d,
+      )
+      .filter((d) => d.percent > 0),
   ];
 
   let running = listPrice;
@@ -133,7 +146,8 @@ export function computeQuote(
   const landValue = round(input.netArea * (project.landValuePerM2 ?? 0));
   const vat = round(Math.max(netPrice - landValue, 0) * project.vatRate);
   const priceWithVat = netPrice + vat;
-  const maintenance = round(netPrice * project.maintenanceRate);
+  const maintenanceBase = project.maintenanceBase === "list" ? listPrice : netPrice;
+  const maintenance = round(maintenanceBase * project.maintenanceRate);
   const total = priceWithVat + maintenance;
 
   let pendingAdvances = 0;

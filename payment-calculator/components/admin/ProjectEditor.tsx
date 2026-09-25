@@ -249,7 +249,7 @@ function GeneralTab({
             <PercentField value={project.vatRate} onChange={(v) => update({ vatRate: v ?? 0 })} />
           </label>
           <label>
-            Phí bảo trì (trên giá sau CK, chưa VAT)
+            Phí bảo trì
             <PercentField value={project.maintenanceRate} onChange={(v) => update({ maintenanceRate: v ?? 0 })} />
           </label>
           <label>
@@ -260,9 +260,52 @@ function GeneralTab({
       </section>
 
       <section className="card">
+        <h2>Cách tính giá</h2>
+        <div className="grid">
+          <label>
+            Giá công bố = đơn giá ×
+            <select
+              value={project.priceArea ?? "gross"}
+              onChange={(e) => update({ priceArea: e.target.value === "net" ? "net" : undefined })}
+            >
+              <option value="gross">DT tim tường</option>
+              <option value="net">DT thông thủy</option>
+            </select>
+          </label>
+          <label>
+            Phí bảo trì tính trên
+            <select
+              value={project.maintenanceBase ?? "net"}
+              onChange={(e) => update({ maintenanceBase: e.target.value === "list" ? "list" : undefined })}
+            >
+              <option value="net">Giá sau chiết khấu</option>
+              <option value="list">Giá công bố (trước chiết khấu)</option>
+            </select>
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={!!project.customUnits}
+              onChange={(e) => update({ customUnits: e.target.checked || undefined })}
+            />
+            Cho nhân viên nhập căn ngoài danh sách (tự điền loại, diện tích, đơn giá)
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={!!project.adjustableMethodDiscount}
+              onChange={(e) => update({ adjustableMethodDiscount: e.target.checked || undefined })}
+            />
+            Cho nhân viên hạ CK PTTT theo từng khách (không vượt mức đã cấu hình)
+          </label>
+        </div>
+      </section>
+
+      <section className="card">
         <h2>Loại sản phẩm & đơn giá tham khảo</h2>
         <p className="muted small">
-          Giá công bố = đơn giá × DT tim tường (khi căn không có giá riêng). Nhân viên vẫn sửa được đơn giá khi tư vấn.
+          Giá công bố = đơn giá × DT {project.priceArea === "net" ? "thông thủy" : "tim tường"} (khi căn không có giá
+          riêng). Nhân viên vẫn sửa được đơn giá khi tư vấn.
         </p>
         <div className="table-wrap">
           <table className="edit-table">

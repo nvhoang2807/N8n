@@ -1,4 +1,5 @@
 import type { Project } from "../lib/types";
+import { palmRiver } from "./palm-river/index.ts";
 import { serenaRiverside } from "./serena-riverside/index.ts";
 
 /**
@@ -58,5 +59,6 @@ const sampleProject: Project = {
 
 export const defaultProjects: Project[] = [
   { ...serenaRiverside, order: 1 },
+  { ...palmRiver, order: 2 },
   { ...sampleProject, order: 99, hidden: true },
 ];

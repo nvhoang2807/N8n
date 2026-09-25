@@ -24,7 +24,7 @@ export function validateProject(p: Project): ValidationResult {
   if (!(p.maintenanceRate >= 0 && p.maintenanceRate < 1)) errors.push("Phí bảo trì không hợp lệ.");
 
   // Loại căn & căn hộ
-  if (p.units.length === 0) errors.push("Dự án chưa có căn nào.");
+  if (p.units.length === 0 && !p.customUnits) errors.push("Dự án chưa có căn nào.");
   const seen = new Set<string>();
   const dupes = new Set<string>();
   for (const u of p.units) {
@@ -35,7 +35,9 @@ export function validateProject(p: Project): ValidationResult {
     if (!p.unitTypes[u.type]) errors.push(`Căn ${u.code}: loại "${u.type}" chưa khai báo trong Loại sản phẩm.`);
   }
   if (dupes.size) errors.push(`Trùng mã căn: ${[...dupes].slice(0, 10).join(", ")}${dupes.size > 10 ? "…" : ""}`);
-  const needPrice = new Set(p.units.filter((u) => u.price === undefined).map((u) => u.type));
+  const needPrice = new Set(
+    p.customUnits ? [] : p.units.filter((u) => u.price === undefined).map((u) => u.type),
+  );
   for (const t of needPrice) {
     if (!(p.defaultUnitPrice[t] > 0)) {
       warnings.push(`Loại "${t}" chưa có đơn giá mặc định — nhân viên sẽ phải tự nhập đơn giá.`);

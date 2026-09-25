@@ -10,6 +10,7 @@ import {
   unitListPrice,
   type Quote,
 } from "@/lib/calc.ts";
+import { fromPercentText, parseNumber, toPercentText } from "@/lib/numbers.ts";
 import type { PaymentMethod, Project, Unit } from "@/lib/types";
 
 type State = {
@@ -22,6 +23,12 @@ type State = {
   rateAfter: string;
   termYears: string;
   customer: string;
+  /** Căn nhập tay (dự án cho phép căn ngoài danh sách): loại, DT thông thủy, DT tim tường */
+  customType: string;
+  customNet: string;
+  customGross: string;
+  /** CK PTTT áp dụng cho khách (chuỗi %), theo id PTTT */
+  methodDiscount: Record<string, string>;
 };
 
 const ADVISOR_KEY = "advisor";
@@ -36,6 +43,10 @@ function initialState(project: Project): State {
     rateAfter: "",
     termYears: "",
     customer: "",
+    customType: Object.keys(project.unitTypes)[0] ?? "",
+    customNet: "",
+    customGross: "",
+    methodDiscount: {},
   };
 }
 
@@ -44,31 +55,64 @@ function stateFromUrl(project: Project): State {
   const q = new URLSearchParams(window.location.search);
   const s = initialState(project);
   const unit = q.get("u");
-  if (unit && project.units.some((u) => u.code === unit)) s.unitCode = unit;
+  if (unit && (project.customUnits || project.units.some((u) => u.code === unit))) s.unitCode = unit;
+  if (project.customUnits) {
+    const type = q.get("lc");
+    if (type && project.unitTypes[type]) s.customType = type;
+    s.customNet = q.get("tt") ?? "";
+    s.customGross = q.get("tim") ?? "";
+  }
+  if (project.adjustableMethodDiscount) {
+    for (const m of project.methods) {
+      const v = q.get(`ckm_${m.id}`);
+      if (v) s.methodDiscount[m.id] = v;
+    }
+  }
   const method = q.get("m");
   if (method && project.methods.some((m) => m.id === method)) s.methodId = method;
   s.unitPrice = q.get("dg") ?? "";
   s.contractDate = q.get("hd") ?? "";
   s.customer = q.get("kh") ?? "";
   for (const d of project.optionalDiscounts) {
-    const v = Number(q.get(`ck_${d.id}`));
-    if (d.options.includes(v)) s.optional[d.id] = v;
+    const raw = q.get(`ck_${d.id}`);
+    if (raw !== null && d.options.includes(Number(raw))) s.optional[d.id] = Number(raw);
   }
   return s;
 }
 
-function stateToUrl(s: State): string {
+function stateToUrl(project: Project, s: State): string {
   const q = new URLSearchParams();
   if (s.unitCode) q.set("u", s.unitCode);
   if (s.unitPrice) q.set("dg", s.unitPrice);
   q.set("m", s.methodId);
-  for (const [k, v] of Object.entries(s.optional)) if (v) q.set(`ck_${k}`, String(v));
+  // Chỉ ghi mức khác mặc định (kể cả 0 khi mặc định khác 0)
+  for (const d of project.optionalDiscounts) {
+    const v = s.optional[d.id] ?? d.default;
+    if (v !== d.default) q.set(`ck_${d.id}`, String(v));
+  }
   if (s.contractDate) q.set("hd", s.contractDate);
   if (s.customer) q.set("kh", s.customer);
+  if (s.customNet) q.set("tt", s.customNet);
+  if (s.customGross) q.set("tim", s.customGross);
+  if (s.customNet || s.customGross) q.set("lc", s.customType);
+  for (const [k, v] of Object.entries(s.methodDiscount)) if (v) q.set(`ckm_${k}`, v);
   return `${window.location.pathname}?${q.toString()}`;
 }
 
 const digits = (v: string) => v.replace(/\D/g, "");
+
+const pricedAreaOf = (project: Project, u: Unit) => (project.priceArea === "net" ? u.netArea : u.grossArea);
+
+/** Căn nhân viên tự nhập; chỉ hợp lệ khi đã có diện tích dùng để tính giá */
+function customUnit(project: Project, s: State): Unit | undefined {
+  const u: Unit = {
+    code: s.unitCode.trim() || "—",
+    type: s.customType,
+    netArea: parseNumber(s.customNet) ?? 0,
+    grossArea: parseNumber(s.customGross) ?? 0,
+  };
+  return pricedAreaOf(project, u) > 0 ? u : undefined;
+}
 
 export default function Calculator({
   project,
@@ -91,8 +135,8 @@ export default function Calculator({
   }, [project]);
 
   useEffect(() => {
-    if (state) window.history.replaceState(null, "", stateToUrl(state));
-  }, [state]);
+    if (state) window.history.replaceState(null, "", stateToUrl(project, state));
+  }, [state, project]);
 
   useEffect(() => {
     try {
@@ -100,9 +144,11 @@ export default function Calculator({
     } catch {}
   }, [advisor]);
 
-  const unit: Unit | undefined = state
+  const listedUnit: Unit | undefined = state
     ? project.units.find((u) => u.code.toLowerCase() === state.unitCode.trim().toLowerCase())
     : undefined;
+  const customMode = !!state && !listedUnit && !!project.customUnits;
+  const unit: Unit | undefined = customMode ? customUnit(project, state) : listedUnit;
 
   const perM2 = state?.unitPrice ? Number(state.unitPrice) : undefined;
   const listPrice = unit ? unitListPrice(project, unit, perM2) : 0;
@@ -116,6 +162,9 @@ export default function Calculator({
         listPrice,
         netArea: unit.netArea,
         optionalDiscounts: state.optional,
+        methodDiscount: project.adjustableMethodDiscount
+          ? fromPercentText(state.methodDiscount[m.id] ?? "")
+          : undefined,
         contractDate,
         rateAfter: state.rateAfter ? Number(state.rateAfter) / 100 : undefined,
         termYears: state.termYears ? Number(state.termYears) : undefined,
@@ -128,7 +177,10 @@ export default function Calculator({
   const update = (patch: Partial<State>) => setState((s) => (s ? { ...s, ...patch } : s));
   const selected = quotes.find((q) => q.method.id === state.methodId) ?? quotes[0];
   const fixedPrice = unit?.price !== undefined && !state.unitPrice;
-  const defaultPerM2 = unit ? project.defaultUnitPrice[unit.type] : undefined;
+  const priceType = customMode ? state.customType : unit?.type;
+  const defaultPerM2 = priceType ? project.defaultUnitPrice[priceType] : undefined;
+  const areaName = project.priceArea === "net" ? "thông thủy" : "tim tường";
+  const maxMethodDiscount = selected?.method.discounts[0]?.percent;
 
   const copyLink = async () => {
     try {
@@ -182,8 +234,7 @@ export default function Calculator({
           <p className="eyebrow">Bảng tạm tính chi tiết giá trị HĐMB</p>
           <h1>{project.name}</h1>
           <p className="muted">
-            {project.developer}
-            {project.description ? ` · ${project.description}` : ""}
+            {[project.developer, project.description].filter(Boolean).join(" · ")}
           </p>
         </div>
         <div className="actions no-print">
@@ -226,19 +277,63 @@ export default function Calculator({
               list="unit-codes"
               value={state.unitCode}
               placeholder="VD: A-04-01"
-              onChange={(e) => update({ unitCode: e.target.value.toUpperCase(), unitPrice: "" })}
+              onChange={(e) =>
+                update(
+                  project.customUnits
+                    ? { unitCode: e.target.value.toUpperCase() }
+                    : { unitCode: e.target.value.toUpperCase(), unitPrice: "" },
+                )
+              }
             />
             <datalist id="unit-codes">
               {project.units.map((u) => (
                 <option key={u.code} value={u.code}>
-                  {`${project.unitTypes[u.type] ?? u.type} · ${u.bedrooms ?? "?"}PN · ${u.grossArea} m²`}
+                  {[
+                    project.unitTypes[u.type] ?? u.type,
+                    u.bedrooms !== undefined ? `${u.bedrooms}PN` : "",
+                    `${pricedAreaOf(project, u)} m²`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </option>
               ))}
             </datalist>
           </label>
-          {unit && !fixedPrice && (
+          {customMode && (
+            <>
+              <label>
+                Loại căn
+                <select value={state.customType} onChange={(e) => update({ customType: e.target.value })}>
+                  {Object.entries(project.unitTypes).map(([code, label]) => (
+                    <option key={code} value={code}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                DT thông thủy (m²)
+                <input
+                  inputMode="decimal"
+                  value={state.customNet}
+                  placeholder="VD: 130"
+                  onChange={(e) => update({ customNet: e.target.value })}
+                />
+              </label>
+              <label>
+                DT tim tường (m²)
+                <input
+                  inputMode="decimal"
+                  value={state.customGross}
+                  placeholder="VD: 145"
+                  onChange={(e) => update({ customGross: e.target.value })}
+                />
+              </label>
+            </>
+          )}
+          {((unit && !fixedPrice) || customMode) && (
             <label>
-              Đơn giá (đ/m² tim tường)
+              Đơn giá (đ/m² {areaName})
               <input
                 inputMode="numeric"
                 value={formatVnd(Number(state.unitPrice || defaultPerM2 || 0))}
@@ -277,7 +372,14 @@ export default function Calculator({
             />
           </label>
         </div>
-        {!unit && state.unitCode && <p className="warn">Không tìm thấy mã căn “{state.unitCode}”.</p>}
+        {customMode ? (
+          <p className="muted small">
+            {project.units.length > 0 && state.unitCode ? `Mã căn “${state.unitCode}” chưa có trong danh sách. ` : ""}
+            Nhập loại căn, diện tích và đơn giá để tính. Giá gốc = đơn giá × DT {areaName}.
+          </p>
+        ) : (
+          !unit && state.unitCode && <p className="warn">Không tìm thấy mã căn “{state.unitCode}”.</p>
+        )}
       </section>
 
       {unit && (
@@ -309,6 +411,20 @@ export default function Calculator({
               <span className="step no-print">3</span>Chi tiết giá trị — {selected.method.name}
             </h2>
             <p className="muted">{selected.method.summary}</p>
+            {project.adjustableMethodDiscount && maxMethodDiscount !== undefined && (
+              <div className="grid no-print">
+                <label>
+                  CK PTTT áp dụng cho khách (%, tối đa {formatPercent(maxMethodDiscount)})
+                  <input
+                    inputMode="decimal"
+                    value={state.methodDiscount[selected.method.id] ?? toPercentText(maxMethodDiscount)}
+                    onChange={(e) =>
+                      update({ methodDiscount: { ...state.methodDiscount, [selected.method.id]: e.target.value } })
+                    }
+                  />
+                </label>
+              </div>
+            )}
             <Breakdown project={project} quote={selected.quote} />
           </section>
 
@@ -364,15 +480,17 @@ export default function Calculator({
 }
 
 function UnitFacts({ project, unit, customer }: { project: Project; unit: Unit; customer: string }) {
-  const facts: [string, string][] = [
-    ["Mã căn", unit.code],
-    ["Loại", project.unitTypes[unit.type] ?? unit.type],
-    ["Phòng ngủ", unit.bedrooms !== undefined ? String(unit.bedrooms) : "—"],
-    ["WC", unit.bathrooms !== undefined ? String(unit.bathrooms) : "—"],
-    ["Hướng", unit.direction ?? "—"],
-    ["DT tim tường", `${unit.grossArea} m²`],
-    ["DT thông thủy", `${unit.netArea} m²`],
-  ];
+  const facts = (
+    [
+      ["Mã căn", unit.code],
+      ["Loại", project.unitTypes[unit.type] ?? unit.type],
+      ["Phòng ngủ", unit.bedrooms !== undefined ? String(unit.bedrooms) : undefined],
+      ["WC", unit.bathrooms !== undefined ? String(unit.bathrooms) : undefined],
+      ["Hướng", unit.direction],
+      ["DT tim tường", unit.grossArea > 0 ? `${unit.grossArea} m²` : undefined],
+      ["DT thông thủy", unit.netArea > 0 ? `${unit.netArea} m²` : undefined],
+    ] as [string, string | undefined][]
+  ).filter((f): f is [string, string] => !!f[1]);
   return (
     <>
       {customer && (
