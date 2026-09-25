@@ -26,6 +26,22 @@ body {
   line-height: 1.5;
 }
 
+.brand {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 16px 16px 0;
+}
+
+.brand a {
+  display: inline-block;
+}
+
+.brand img {
+  display: block;
+  width: auto;
+  height: 72px;
+}
+
 .page {
   max-width: 1040px;
   margin: 0 auto;
@@ -350,6 +366,13 @@ tfoot td {
   .page {
     padding: 0;
     max-width: none;
+  }
+  .brand {
+    max-width: none;
+    padding: 0 0 8px;
+  }
+  .brand img {
+    height: 48px;
   }
   .no-print {
     display: none !important;

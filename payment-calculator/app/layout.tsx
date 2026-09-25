@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import Image from "next/image";
+import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,7 +17,14 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="vi">
-      <body>{children}</body>
+      <body>
+        <header className="brand">
+          <Link href="/" aria-label="Mapleland – trang chủ">
+            <Image src="/logo.png" alt="Mapleland" width={552} height={396} priority />
+          </Link>
+        </header>
+        {children}
+      </body>
     </html>
   );
 }
