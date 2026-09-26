@@ -138,3 +138,37 @@ test("lũy kế là cộng dồn tỷ lệ các đợt như bảng Excel", () =>
   // Serena: Cọc —, VBTT 5% (ứng trước), Đợt 1 70% (đã gồm VBTT), bàn giao 95%, GCN 100%
   assert.deepEqual(cum(srn, "pttt-nhanh-70"), [undefined, 5, 70, 95, 100]);
 });
+
+test("lãi vay: dư nợ giảm dần và trả góp đều theo công thức chuẩn", async () => {
+  const { estimateLoan } = await import("./calc.ts");
+  const plain = { policy: "", supportMonths: 0, customerRate: 0, termYears: 1, rateAfter: 0.12, gracePrincipalMonths: 0 };
+
+  // Dư nợ giảm dần: gốc 83.333.333/tháng, lãi tháng đầu 1% × 1 tỷ, tổng lãi = 1% × 1 tỷ × (12+…+1)/12
+  const d = estimateLoan(plain, 1_000_000_000, 0.12, 1, "declining");
+  assert.equal(d.schedule.length, 12);
+  assert.equal(d.schedule[0].principal, 83_333_333);
+  assert.equal(d.schedule[0].interest, 10_000_000);
+  assert.equal(d.schedule[0].payment, 93_333_333);
+  assert.ok(d.schedule[11].payment < d.schedule[0].payment);
+  assert.equal(d.totalInterest, 65_000_000);
+  assert.equal(d.schedule[11].closing, 0);
+
+  // Trả góp đều: = PMT(1%, 12, 1 tỷ) = 88.848.788 mỗi tháng (Excel)
+  const a = estimateLoan(plain, 1_000_000_000, 0.12, 1, "annuity");
+  assert.ok(a.schedule.every((r) => Math.abs(r.payment - 88_848_788) <= 1), "góp đều mỗi tháng");
+  assert.ok(Math.abs(a.totalInterest - 66_185_461) <= 3);
+  assert.equal(a.schedule[11].closing, 0);
+});
+
+test("lãi vay trả góp đều: ân hạn + CĐT hỗ trợ lãi rồi góp đều theo lãi thả nổi", async () => {
+  const { estimateLoan } = await import("./calc.ts");
+  const vay1 = { policy: "", supportMonths: 24, customerRate: 0, termYears: 20, rateAfter: 0.1, gracePrincipalMonths: 24 };
+  const q = estimateLoan(vay1, 1_000_000_000, 0.1, 20, "annuity");
+  assert.ok(q.schedule.slice(0, 24).every((r) => r.payment === 0), "24 tháng đầu khách không trả");
+  // Từ tháng 25: góp đều = PMT(10%/12, 216, 1 tỷ)
+  const r = 0.1 / 12;
+  const pmt = (1_000_000_000 * r) / (1 - Math.pow(1 + r, -216));
+  assert.ok(q.schedule.slice(24, 239).every((x) => Math.abs(x.payment - pmt) <= 1));
+  assert.equal(q.schedule[239].closing, 0);
+  assert.ok(q.supportValue > 0);
+});

@@ -8,6 +8,7 @@ import {
   formatShort,
   formatVnd,
   unitListPrice,
+  type LoanType,
   type Quote,
 } from "@/lib/calc.ts";
 import { projectColorVars } from "@/lib/color.ts";
@@ -24,6 +25,7 @@ type State = {
   contractDate: string;
   rateAfter: string;
   termYears: string;
+  loanType: LoanType;
   customer: string;
   /** Căn nhập tay (dự án cho phép căn ngoài danh sách): loại, DT thông thủy, DT tim tường */
   customType: string;
@@ -44,6 +46,7 @@ function initialState(project: Project): State {
     contractDate: "",
     rateAfter: "",
     termYears: "",
+    loanType: "declining",
     customer: "",
     customType: Object.keys(project.unitTypes)[0] ?? "",
     customNet: "",
@@ -74,6 +77,9 @@ function stateFromUrl(project: Project): State {
   if (method && project.methods.some((m) => m.id === method)) s.methodId = method;
   s.unitPrice = q.get("dg") ?? "";
   s.contractDate = q.get("hd") ?? "";
+  s.rateAfter = q.get("ls") ?? "";
+  s.termYears = q.get("tg") ?? "";
+  if (q.get("kv") === "deu") s.loanType = "annuity";
   s.customer = q.get("kh") ?? "";
   for (const d of project.optionalDiscounts) {
     const raw = q.get(`ck_${d.id}`);
@@ -93,6 +99,9 @@ function stateToUrl(project: Project, s: State): string {
     if (v !== d.default) q.set(`ck_${d.id}`, String(v));
   }
   if (s.contractDate) q.set("hd", s.contractDate);
+  if (s.rateAfter) q.set("ls", s.rateAfter);
+  if (s.termYears) q.set("tg", s.termYears);
+  if (s.loanType === "annuity") q.set("kv", "deu");
   if (s.customer) q.set("kh", s.customer);
   if (s.customNet) q.set("tt", s.customNet);
   if (s.customGross) q.set("tim", s.customGross);
@@ -206,6 +215,7 @@ export default function Calculator({
         contractDate,
         rateAfter: state.rateAfter ? Number(state.rateAfter) / 100 : undefined,
         termYears: state.termYears ? Number(state.termYears) : undefined,
+        loanType: state.loanType,
       }),
     }));
   }, [state, project, unit, listPrice]);
@@ -465,6 +475,7 @@ export default function Calculator({
                 quote={selected.quote}
                 rateAfter={state.rateAfter}
                 termYears={state.termYears}
+                loanType={state.loanType}
                 onChange={update}
               />
             </section>
@@ -703,24 +714,47 @@ function Schedule({ quote, showDates }: { quote: Quote; showDates: boolean }) {
   );
 }
 
+const LOAN_TYPES: { value: LoanType; label: string; hint: string }[] = [
+  { value: "declining", label: "Dư nợ giảm dần", hint: "Gốc trả đều, lãi tính trên dư nợ còn lại — số tiền trả giảm dần" },
+  { value: "annuity", label: "Trả góp đều", hint: "Gốc + lãi bằng nhau mỗi tháng" },
+];
+
 function LoanBox({
   method,
   quote,
   rateAfter,
   termYears,
+  loanType,
   onChange,
 }: {
   method: PaymentMethod;
   quote: Quote;
   rateAfter: string;
   termYears: string;
+  loanType: LoanType;
   onChange: (patch: Partial<State>) => void;
 }) {
   const loan = quote.loan!;
+  const type = LOAN_TYPES.find((t) => t.value === loan.type)!;
   return (
     <>
       <h2>Ước tính khoản vay — {method.name}</h2>
       <p>{loan.policy}</p>
+      <div className="loan-types no-print" role="radiogroup" aria-label="Cách trả nợ">
+        {LOAN_TYPES.map((t) => (
+          <button
+            key={t.value}
+            type="button"
+            role="radio"
+            aria-checked={loanType === t.value}
+            className={loanType === t.value ? "active" : ""}
+            onClick={() => onChange({ loanType: t.value })}
+          >
+            <strong>{t.label}</strong>
+            <span>{t.hint}</span>
+          </button>
+        ))}
+      </div>
       <div className="grid no-print">
         <label>
           Lãi suất thả nổi giả định sau ưu đãi (%/năm)
@@ -739,32 +773,88 @@ function LoanBox({
           />
         </label>
       </div>
-      <div className="kpis">
+      <div className="kpis loan-kpis">
         <div>
           <span>Số tiền vay</span>
           <strong>{formatShort(loan.amount)}</strong>
         </div>
+        {loan.supportMonths > 0 && (
+          <div>
+            <span>
+              Khách trả tháng đầu ({loan.supportMonths} tháng ưu đãi
+              {loan.customerRate > 0 ? `, LS ${formatPercent(loan.customerRate)}` : ""})
+            </span>
+            <strong>{loan.monthlyDuringSupport > 0 ? `${formatShort(loan.monthlyDuringSupport)}/tháng` : "0 đ"}</strong>
+          </div>
+        )}
         <div>
-          <span>
-            Khách trả tháng đầu ({loan.supportMonths} tháng ưu đãi
-            {loan.customerRate > 0 ? `, LS ${formatPercent(loan.customerRate)}` : ""})
-          </span>
-          <strong>{loan.monthlyDuringSupport > 0 ? `${formatShort(loan.monthlyDuringSupport)}/tháng` : "0 đ"}</strong>
-        </div>
-        <div>
-          <span>Tháng đầu sau ưu đãi (gốc + lãi)</span>
+          <span>{loan.supportMonths > 0 ? "Tháng đầu sau ưu đãi (gốc + lãi)" : "Tháng đầu (gốc + lãi)"}</span>
           <strong>{formatShort(loan.firstFullPayment)}/tháng</strong>
         </div>
+        {loan.supportMonths > 0 && (
+          <div>
+            <span>CĐT hỗ trợ lãi (ước tính)</span>
+            <strong className="good">{formatShort(loan.supportValue)}</strong>
+          </div>
+        )}
         <div>
-          <span>CĐT hỗ trợ lãi (ước tính)</span>
-          <strong className="good">{formatShort(loan.supportValue)}</strong>
+          <span>Tổng lãi khách trả</span>
+          <strong>{formatShort(loan.totalInterest)}</strong>
+        </div>
+        <div>
+          <span>Tổng gốc + lãi</span>
+          <strong>{formatShort(loan.totalPayment)}</strong>
         </div>
       </div>
       <p className="muted small">
-        Giả định: vay {loan.termYears} năm, dư nợ giảm dần
+        Giả định: vay {loan.termYears} năm, <strong>{type.label.toLowerCase()}</strong>
         {loan.graceMonths > 0 ? `, ân hạn gốc ${loan.graceMonths} tháng` : ", trả gốc từ tháng đầu"}, lãi suất thả nổi{" "}
-        {formatPercent(loan.rateAfter)}/năm. Số liệu thực tế theo thẩm định của ngân hàng.
+        {formatPercent(loan.rateAfter)}/năm
+        {loan.type === "annuity" ? " (số tiền góp được tính lại khi hết ân hạn/ưu đãi)" : ""}. Số liệu thực tế theo thẩm
+        định của ngân hàng.
       </p>
+      <details className="loan-schedule no-print">
+        <summary>Xem lịch trả nợ từng tháng ({loan.schedule.length} kỳ)</summary>
+        <div className="table-wrap">
+          <table className="stack">
+            <thead>
+              <tr>
+                <th>Kỳ</th>
+                <th className="num">Dư nợ đầu kỳ</th>
+                <th className="num">Gốc</th>
+                <th className="num">Lãi</th>
+                <th className="num">Tổng trả</th>
+                <th className="num">Dư nợ còn lại</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loan.schedule.map((r) => (
+                <tr key={r.month} className={r.supported ? "supported" : ""}>
+                  <td className="nowrap">
+                    <strong>Tháng {r.month}</strong>
+                    {r.supported && <span className="tag">CĐT hỗ trợ lãi</span>}
+                  </td>
+                  <td className="num" data-label="Dư nợ đầu kỳ">{formatVnd(r.opening)}</td>
+                  <td className="num" data-label="Gốc">{formatVnd(r.principal)}</td>
+                  <td className="num" data-label="Lãi">{formatVnd(r.interest)}</td>
+                  <td className="num amount" data-label="Tổng trả">{formatVnd(r.payment)}</td>
+                  <td className="num muted" data-label="Dư nợ còn lại">{formatVnd(r.closing)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td>Tổng cộng</td>
+                <td />
+                <td className="num" data-label="Gốc">{formatVnd(loan.amount)}</td>
+                <td className="num" data-label="Lãi">{formatVnd(loan.totalInterest)}</td>
+                <td className="num" data-label="Tổng trả">{formatVnd(loan.totalPayment)}</td>
+                <td />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </details>
     </>
   );
 }

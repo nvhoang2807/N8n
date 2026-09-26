@@ -624,6 +624,74 @@ tfoot td {
   cursor: default;
 }
 
+/* ---------- Khoản vay ---------- */
+
+.loan-types {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 14px 0 4px;
+}
+
+.loan-types button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
+.loan-types button span {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.loan-types button.active {
+  border-color: var(--proj-color, var(--brand));
+  background: var(--proj-color-soft, var(--brand-soft));
+  box-shadow: inset 0 0 0 1px var(--proj-color, var(--brand));
+}
+
+.loan-types button.active strong {
+  color: var(--proj-color, var(--brand));
+}
+
+@media (min-width: 700px) {
+  .kpis.loan-kpis {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.loan-schedule {
+  margin-top: 16px;
+}
+
+.loan-schedule summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--proj-color, var(--brand));
+  padding: 6px 0;
+}
+
+.loan-schedule .table-wrap {
+  max-height: 520px;
+  overflow: auto;
+  margin-top: 8px;
+}
+
+.loan-schedule thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.loan-schedule tr.supported {
+  background: var(--good-soft);
+}
+
 /* ---------- Trang chủ ---------- */
 
 .project-grid {

@@ -22,7 +22,27 @@ export type ScheduleRow = {
   dueDate?: Date;
 };
 
+/** Cách trả nợ: "declining" = dư nợ giảm dần (gốc đều), "annuity" = trả góp đều (gốc + lãi bằng nhau) */
+export type LoanType = "declining" | "annuity";
+
+export type LoanRow = {
+  month: number;
+  /** Dư nợ đầu kỳ */
+  opening: number;
+  principal: number;
+  /** Lãi khách trả trong kỳ */
+  interest: number;
+  payment: number;
+  /** Dư nợ cuối kỳ */
+  closing: number;
+  /** Lãi suất khách áp dụng trong kỳ (năm) */
+  rate: number;
+  /** Kỳ thuộc thời gian CĐT hỗ trợ lãi */
+  supported: boolean;
+};
+
 export type LoanEstimate = {
+  type: LoanType;
   amount: number;
   bank?: string;
   policy: string;
@@ -37,6 +57,13 @@ export type LoanEstimate = {
   firstFullPayment: number;
   /** Giá trị lãi chủ đầu tư hỗ trợ (ước tính theo lãi suất giả định) */
   supportValue: number;
+  /** Tổng lãi khách tự trả suốt thời hạn vay */
+  totalInterest: number;
+  /** Tổng gốc + lãi khách trả */
+  totalPayment: number;
+  /** Số tiền trả cao nhất trong một tháng */
+  maxPayment: number;
+  schedule: LoanRow[];
 };
 
 export type Quote = {
@@ -74,6 +101,7 @@ export type QuoteInput = {
   /** Ghi đè giả định khoản vay */
   rateAfter?: number;
   termYears?: number;
+  loanType?: LoanType;
 };
 
 const round = (n: number) => Math.round(n);
@@ -218,36 +246,77 @@ export function computeQuote(
     bankPays,
     mismatch: total - cumulative,
     loan: method.loan
-      ? estimateLoan(method.loan, bankPays, input.rateAfter, input.termYears)
+      ? estimateLoan(method.loan, bankPays, input.rateAfter, input.termYears, input.loanType)
       : undefined,
   };
 }
 
+/**
+ * Mô phỏng khoản vay theo tháng.
+ * - Trong thời gian hỗ trợ: khách trả lãi theo LS khách (customerRate), CĐT bù phần chênh tới LS thả nổi giả định.
+ * - Ân hạn gốc: các tháng đầu chỉ trả lãi.
+ * - "declining" (dư nợ giảm dần): gốc chia đều cho số tháng còn lại sau ân hạn, lãi tính trên dư nợ.
+ * - "annuity" (trả góp đều): gốc + lãi bằng nhau mỗi tháng; tính lại số tiền góp khi hết ân hạn
+ *   và khi lãi suất đổi (hết thời gian hỗ trợ), như cách ngân hàng áp dụng với lãi thả nổi.
+ */
 export function estimateLoan(
   loan: Loan,
   amount: number,
   rateAfter = loan.rateAfter,
   termYears = loan.termYears,
+  type: LoanType = "declining",
 ): LoanEstimate {
-  const graceMonths = Math.min(loan.gracePrincipalMonths, termYears * 12 - 1);
-  const principal = amount / (termYears * 12 - graceMonths);
+  const months = Math.max(1, Math.round(termYears * 12));
+  const graceMonths = Math.min(loan.gracePrincipalMonths, months - 1);
+  const evenPrincipal = amount / (months - graceMonths);
 
-  // Mô phỏng theo tháng trong thời gian hỗ trợ: dư nợ giảm dần sau ân hạn gốc.
+  const schedule: LoanRow[] = [];
   let outstanding = amount;
   let supportValue = 0;
-  let monthlyDuringSupport = 0;
-  for (let m = 1; m <= loan.supportMonths; m++) {
-    const payPrincipal = m > graceMonths ? Math.min(principal, outstanding) : 0;
-    if (m === 1) {
-      monthlyDuringSupport = payPrincipal + (outstanding * loan.customerRate) / 12;
+  let annuityPayment = 0;
+  let annuityRate: number | undefined;
+
+  for (let m = 1; m <= months; m++) {
+    const supported = m <= loan.supportMonths;
+    const rate = supported ? loan.customerRate : rateAfter;
+    const interest = (outstanding * rate) / 12;
+    if (supported) supportValue += (outstanding * Math.max(rateAfter - loan.customerRate, 0)) / 12;
+
+    let principal = 0;
+    if (m > graceMonths) {
+      if (m === months) principal = outstanding;
+      else if (type === "declining") principal = Math.min(evenPrincipal, outstanding);
+      else {
+        if (annuityRate !== rate) {
+          // Bắt đầu trả gốc hoặc lãi suất vừa đổi: tính lại số tiền góp đều trên dư nợ và số tháng còn lại
+          const remaining = months - m + 1;
+          const r = rate / 12;
+          annuityPayment = r === 0 ? outstanding / remaining : (outstanding * r) / (1 - Math.pow(1 + r, -remaining));
+          annuityRate = rate;
+        }
+        principal = Math.min(Math.max(annuityPayment - interest, 0), outstanding);
+      }
     }
-    supportValue += (outstanding * Math.max(rateAfter - loan.customerRate, 0)) / 12;
-    outstanding -= payPrincipal;
+
+    const opening = outstanding;
+    outstanding -= principal;
+    schedule.push({
+      month: m,
+      opening: round(opening),
+      principal: round(principal),
+      interest: round(interest),
+      payment: round(principal + interest),
+      closing: round(Math.max(outstanding, 0)),
+      rate,
+      supported,
+    });
   }
-  const firstPrincipal =
-    loan.supportMonths + 1 > graceMonths ? Math.min(principal, outstanding) : 0;
+
+  const afterSupport = schedule[Math.min(loan.supportMonths, months - 1)];
+  const totalInterest = schedule.reduce((s, r) => s + r.interest, 0);
 
   return {
+    type,
     amount,
     bank: loan.bank,
     policy: loan.policy,
@@ -256,9 +325,13 @@ export function estimateLoan(
     termYears,
     rateAfter,
     graceMonths,
-    monthlyDuringSupport: round(monthlyDuringSupport),
-    firstFullPayment: round(firstPrincipal + (outstanding * rateAfter) / 12),
+    monthlyDuringSupport: loan.supportMonths > 0 ? schedule[0].payment : 0,
+    firstFullPayment: afterSupport.payment,
     supportValue: round(supportValue),
+    totalInterest,
+    totalPayment: totalInterest + amount,
+    maxPayment: Math.max(...schedule.map((r) => r.payment)),
+    schedule,
   };
 }
 
