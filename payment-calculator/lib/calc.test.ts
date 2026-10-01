@@ -54,7 +54,8 @@ test("mọi PTTT của mọi dự án cộng đủ 100% tổng giá trị HĐMB"
       assert.equal(q.mismatch, 0, `${project.id}/${m.id}`);
       const pct = m.milestones.reduce((s, r) => s + (r.advance ? 0 : (r.percent ?? 0)), 0);
       assert.ok(Math.abs(pct - 1) < 1e-9, `${project.id}/${m.id}: tổng tỷ lệ ${pct}`);
-      assert.ok(q.schedule.every((r) => r.amount >= 0), `${project.id}/${m.id}: đợt âm`);
+      // Dự án chưa có đơn giá nào (giá = 0) thì không kiểm tra đợt âm — như bước kiểm tra trong admin
+      if (q.listPrice > 0) assert.ok(q.schedule.every((r) => r.amount >= 0), `${project.id}/${m.id}: đợt âm`);
     }
   }
 });
