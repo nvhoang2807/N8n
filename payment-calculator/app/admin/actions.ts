@@ -3,6 +3,7 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { defaultProjects } from "@/data/projects.ts";
+import { migrations } from "@/lib/migrations.ts";
 import { login, logout, requireAdmin } from "@/lib/auth";
 import { deleteProject, PROJECTS_TAG, readProjects, saveProject } from "@/lib/store";
 import type { Project } from "@/lib/types";
@@ -64,6 +65,8 @@ export async function updateDefaultProjectAction(id: string): Promise<void> {
       hidden: current?.hidden ?? project.hidden,
       color: current?.color ?? project.color,
       image: current?.image ?? project.image,
+      // Cấu hình trong code đã gồm các sửa đổi tự động → đánh dấu đã áp
+      migrations: migrations.filter((m) => m.projectId === id).map((m) => m.id),
     },
     id,
   );
@@ -76,7 +79,7 @@ export async function addDefaultProjectAction(id: string): Promise<void> {
   await requireAdmin();
   const project = defaultProjects.find((p) => p.id === id);
   if (!project) throw new Error(`Không có dự án mặc định "${id}".`);
-  await saveProject(project);
+  await saveProject({ ...project, migrations: migrations.filter((m) => m.projectId === id).map((m) => m.id) });
   refreshPublicPages();
   revalidatePath("/admin");
 }

@@ -159,6 +159,8 @@ export type Project = {
   order?: number;
   /** Ẩn khỏi danh sách trang chủ (vẫn mở được bằng link) */
   hidden?: boolean;
+  /** Các bước sửa dữ liệu tự động đã áp (xem lib/migrations.ts), do hệ thống ghi */
+  migrations?: string[];
   /** Thời điểm lưu gần nhất (ISO), do hệ thống ghi */
   updatedAt?: string;
 };
@@ -177,7 +179,7 @@ export function sameConfig(a: Project, b: Project): boolean {
           )
         : v;
   // color/image là tùy chỉnh riêng của từng dự án trên admin, không thuộc "cấu hình tính giá" nên bỏ qua khi so sánh
-  const strip = ({ updatedAt: _u, order: _o, hidden: _h, color: _c, image: _i, ...rest }: Project) =>
+  const strip = ({ updatedAt: _u, order: _o, hidden: _h, color: _c, image: _i, migrations: _m, ...rest }: Project) =>
     JSON.stringify(stable(rest));
   return strip(a) === strip(b);
 }

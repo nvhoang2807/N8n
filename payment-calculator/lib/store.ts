@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { del, get, list, put } from "@vercel/blob";
 import { unstable_cache } from "next/cache";
 import { defaultProjects } from "@/data/projects.ts";
+import { applyMigrations } from "./migrations.ts";
 import type { Project } from "./types";
 
 /**
@@ -85,14 +86,22 @@ export async function readProjects(): Promise<{ projects: Project[]; source: "bl
     return { projects: sortProjects(defaultProjects), source: "default" };
   }
   const texts = await Promise.all(files.map((p) => storage.read(p)));
-  const projects = texts.filter((t): t is string => t !== null).map((t) => JSON.parse(t) as Project);
+  const stored = texts.filter((t): t is string => t !== null).map((t) => JSON.parse(t) as Project);
+  // Tự áp các sửa đổi cấu hình mới (lib/migrations.ts) và ghi lại, không cần bấm "Cập nhật" trong admin
+  const projects = await Promise.all(
+    stored.map(async (p) => {
+      const { project, changed } = applyMigrations(p);
+      if (changed) await writeProject(project).catch((e) => console.error("migration write failed", p.id, e));
+      return project;
+    }),
+  );
   return { projects: sortProjects(projects), source: "blob" };
 }
 
 /** Bản có cache cho trang khách — làm mới ngay khi admin lưu (updateTag) hoặc tối đa sau 1 giờ */
 export const loadProjects = unstable_cache(
   async () => (await readProjects()).projects,
-  ["projects-v1"],
+  ["projects-v2"],
   { tags: [PROJECTS_TAG], revalidate: 3600 },
 );
 

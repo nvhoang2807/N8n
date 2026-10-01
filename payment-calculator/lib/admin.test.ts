@@ -88,3 +88,30 @@ test("file Excel mẫu đọc ngược lại ra đúng danh sách căn", async (
   assert.deepEqual(JSON.parse(JSON.stringify(back.units)), units);
   assert.deepEqual(back.skipped, []);
 });
+
+test("tự sửa dữ liệu đã lưu: bỏ CK 5% PTTT Vay & Đặc biệt (Imperia), giữ chỉnh sửa khác, chạy 1 lần", async () => {
+  const { applyMigrations } = await import("./migrations.ts");
+  const isp = defaultProjects.find((p) => p.id === "imperia-sensa-park")!;
+  // Bản cũ đã lưu: còn CK 5% + một chỉnh sửa trong admin (ghi chú)
+  const old = {
+    ...isp,
+    notes: ["Ghi chú admin tự sửa"],
+    methods: isp.methods.map((m) =>
+      m.id === "pttt-vay" || m.id === "pttt-dac-biet"
+        ? { ...m, summary: `CK 5% · ${m.summary}`, discounts: [{ label: `Chiết khấu ${m.name}`, percent: 0.05 }] }
+        : m,
+    ),
+  };
+  const { project, changed } = applyMigrations(old);
+  assert.equal(changed, true);
+  for (const id of ["pttt-vay", "pttt-dac-biet"]) {
+    const m = project.methods.find((x) => x.id === id)!;
+    assert.deepEqual(m.discounts, []);
+    assert.ok(!m.summary.startsWith("CK"), m.summary);
+  }
+  assert.equal(project.methods.find((x) => x.id === "pttt-chuan")!.discounts[0].percent, 0.05);
+  assert.deepEqual(project.notes, ["Ghi chú admin tự sửa"]);
+  assert.equal(applyMigrations(project).changed, false);
+  // Dự án khác không bị đụng tới
+  assert.equal(applyMigrations(defaultProjects[0]).changed, false);
+});
