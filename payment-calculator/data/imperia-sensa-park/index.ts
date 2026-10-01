@@ -53,7 +53,14 @@ function method(
   milestones: Milestone[],
   loan?: Loan,
 ): PaymentMethod {
-  return { id, name, summary, discounts: [{ label: `Chiết khấu ${name}`, percent: discount }], milestones, loan };
+  return {
+    id,
+    name,
+    summary,
+    discounts: discount > 0 ? [{ label: `Chiết khấu ${name}`, percent: discount }] : [],
+    milestones,
+    loan,
+  };
 }
 
 export const imperiaSensaPark: Project = {
@@ -102,8 +109,8 @@ export const imperiaSensaPark: Project = {
     method(
       "pttt-vay",
       "PTTT Vay",
-      "CK 5% · Ngân hàng giải ngân 70%",
-      0.05,
+      "Ngân hàng giải ngân 70%",
+      0, // Không chiết khấu PTTT (file Excel ghi 5% là chép nhầm từ PTTT khác)
       [
         ...head(0.1),
         {
@@ -122,8 +129,8 @@ export const imperiaSensaPark: Project = {
     method(
       "pttt-dac-biet",
       "PTTT Đặc biệt",
-      "CK 5% · Ngân hàng giải ngân 55% + 15% khi bàn giao",
-      0.05,
+      "Ngân hàng giải ngân 55% + 15% khi bàn giao",
+      0, // Không chiết khấu PTTT
       [
         ...head(0),
         {
