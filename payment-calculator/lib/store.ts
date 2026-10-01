@@ -101,7 +101,7 @@ export async function readProjects(): Promise<{ projects: Project[]; source: "bl
 /** Bản có cache cho trang khách — làm mới ngay khi admin lưu (updateTag) hoặc tối đa sau 1 giờ */
 export const loadProjects = unstable_cache(
   async () => (await readProjects()).projects,
-  ["projects-v2"],
+  ["projects-v3"],
   { tags: [PROJECTS_TAG], revalidate: 3600 },
 );
 

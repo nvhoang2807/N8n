@@ -110,7 +110,8 @@ test("tự sửa dữ liệu đã lưu: bỏ CK 5% PTTT Vay & Đặc biệt (Imp
     assert.ok(!m.summary.startsWith("CK"), m.summary);
   }
   assert.equal(project.methods.find((x) => x.id === "pttt-chuan")!.discounts[0].percent, 0.05);
-  assert.deepEqual(project.notes, ["Ghi chú admin tự sửa"]);
+  // Bước "ghi đè từ code" chạy sau: cấu hình trùng bản trong code
+  assert.deepEqual(project.methods, isp.methods);
   assert.equal(applyMigrations(project).changed, false);
   // Dự án khác không bị đụng tới
   assert.equal(applyMigrations(defaultProjects[0]).changed, false);

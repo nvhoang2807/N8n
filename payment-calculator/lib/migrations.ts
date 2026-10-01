@@ -1,3 +1,4 @@
+import { imperiaSensaPark } from "../data/imperia-sensa-park/index.ts";
 import type { Project } from "./types";
 
 /**
@@ -19,6 +20,21 @@ export const migrations: Migration[] = [
           ? { ...m, discounts: [], summary: m.summary.replace(/^CK\s*[\d.,]+%\s*·\s*/i, "") }
           : m,
       ),
+    }),
+  },
+  {
+    // Ghi đè toàn bộ cấu hình Imperia Sensa Park bằng bản trong code (theo yêu cầu "deploy đè"),
+    // chỉ giữ thứ tự, ẩn/hiện, màu và ảnh đại diện đã chỉnh trong admin
+    id: "2026-10-isp-ghi-de-tu-code",
+    projectId: "imperia-sensa-park",
+    apply: (p) => ({
+      ...imperiaSensaPark,
+      order: p.order ?? imperiaSensaPark.order,
+      hidden: p.hidden,
+      color: p.color,
+      image: p.image,
+      migrations: p.migrations,
+      updatedAt: p.updatedAt,
     }),
   },
 ];
