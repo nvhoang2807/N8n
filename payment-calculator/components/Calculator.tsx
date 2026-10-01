@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  applyPriceOptions,
   computeQuote,
   formatDate,
   formatPercent,
@@ -22,6 +23,8 @@ type State = {
   unitPrice: string;
   methodId: string;
   optional: Record<string, number>;
+  /** Lựa chọn tùy chọn đơn giá (vị trí trong choices), theo id */
+  priceOpts: Record<string, number>;
   contractDate: string;
   rateAfter: string;
   termYears: string;
@@ -43,6 +46,7 @@ function initialState(project: Project): State {
     unitPrice: "",
     methodId: project.methods[0]?.id ?? "",
     optional: Object.fromEntries(project.optionalDiscounts.map((d) => [d.id, d.default])),
+    priceOpts: Object.fromEntries((project.priceOptions ?? []).map((o) => [o.id, o.default])),
     contractDate: "",
     rateAfter: "",
     termYears: "",
@@ -81,6 +85,10 @@ function stateFromUrl(project: Project): State {
   s.termYears = q.get("tg") ?? "";
   if (q.get("kv") === "deu") s.loanType = "annuity";
   s.customer = q.get("kh") ?? "";
+  for (const o of project.priceOptions ?? []) {
+    const raw = q.get(`gia_${o.id}`);
+    if (raw !== null && o.choices[Number(raw)]) s.priceOpts[o.id] = Number(raw);
+  }
   for (const d of project.optionalDiscounts) {
     const raw = q.get(`ck_${d.id}`);
     if (raw !== null && d.options.includes(Number(raw))) s.optional[d.id] = Number(raw);
@@ -93,6 +101,10 @@ function stateToUrl(project: Project, s: State): string {
   if (s.unitCode) q.set("u", s.unitCode);
   if (s.unitPrice) q.set("dg", s.unitPrice);
   q.set("m", s.methodId);
+  for (const o of project.priceOptions ?? []) {
+    const v = s.priceOpts[o.id] ?? o.default;
+    if (v !== o.default) q.set(`gia_${o.id}`, String(v));
+  }
   // Chỉ ghi mức khác mặc định (kể cả 0 khi mặc định khác 0)
   for (const d of project.optionalDiscounts) {
     const v = s.optional[d.id] ?? d.default;
@@ -183,7 +195,7 @@ export default function Calculator({
   const unit: Unit | undefined = customMode ? customUnit(project, state) : listedUnit;
 
   const perM2 = state?.unitPrice ? Number(state.unitPrice) : undefined;
-  const listPrice = unit ? unitListPrice(project, unit, perM2) : 0;
+  const listPrice = unit ? applyPriceOptions(project, unitListPrice(project, unit, perM2), state?.priceOpts) : 0;
 
   const unitOptions = useMemo(
     () =>
@@ -376,8 +388,31 @@ export default function Calculator({
               {!state.unitPrice && defaultPerM2 ? (
                 <small className="muted">Đơn giá tham khảo theo loại căn — sửa theo bảng giá thực tế</small>
               ) : null}
+              {(() => {
+                const base = Number(state.unitPrice || defaultPerM2 || 0);
+                const applied = applyPriceOptions(project, base, state.priceOpts);
+                return base > 0 && applied !== base ? (
+                  <small className="muted">Đơn giá áp dụng: {formatVnd(applied)} đ/m² (đã gồm tùy chọn bên cạnh)</small>
+                ) : null;
+              })()}
             </label>
           )}
+          {(project.priceOptions ?? []).map((o) => (
+            <label key={o.id}>
+              {o.label}
+              <select
+                value={state.priceOpts[o.id] ?? o.default}
+                onChange={(e) => update({ priceOpts: { ...state.priceOpts, [o.id]: Number(e.target.value) } })}
+              >
+                {o.choices.map((c, i) => (
+                  <option key={i} value={i}>
+                    {c.label}
+                    {c.percent ? ` (${c.percent > 0 ? "+" : ""}${formatPercent(c.percent)} đơn giá)` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
           {project.optionalDiscounts.map((d) => (
             <label key={d.id}>
               {d.label}
@@ -418,7 +453,7 @@ export default function Calculator({
 
       {unit && (
         <section className="card unit">
-          <UnitFacts project={project} unit={unit} customer={state.customer} />
+          <UnitFacts project={project} unit={unit} customer={state.customer} priceOpts={state.priceOpts} />
         </section>
       )}
 
@@ -515,7 +550,17 @@ export default function Calculator({
   );
 }
 
-function UnitFacts({ project, unit, customer }: { project: Project; unit: Unit; customer: string }) {
+function UnitFacts({
+  project,
+  unit,
+  customer,
+  priceOpts,
+}: {
+  project: Project;
+  unit: Unit;
+  customer: string;
+  priceOpts: Record<string, number>;
+}) {
   const facts = (
     [
       ["Mã căn", unit.code],
@@ -525,6 +570,9 @@ function UnitFacts({ project, unit, customer }: { project: Project; unit: Unit; 
       ["Hướng", unit.direction],
       ["DT tim tường", unit.grossArea > 0 ? `${unit.grossArea} m²` : undefined],
       ["DT thông thủy", unit.netArea > 0 ? `${unit.netArea} m²` : undefined],
+      ...(project.priceOptions ?? []).map(
+        (o): [string, string | undefined] => [o.label, o.choices[priceOpts[o.id] ?? o.default]?.label],
+      ),
     ] as [string, string | undefined][]
   ).filter((f): f is [string, string] => !!f[1]);
   return (

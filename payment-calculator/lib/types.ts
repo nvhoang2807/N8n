@@ -23,6 +23,18 @@ export type Discount = {
   base?: "list" | "running";
 };
 
+/**
+ * Tùy chọn làm thay đổi đơn giá (VD loại bàn giao: Hoàn thiện +7%, Sáng tạo +0%).
+ * Phần trăm được cộng vào giá công bố (= đơn giá × diện tích) trước mọi chiết khấu.
+ */
+export type PriceOption = {
+  id: string;
+  label: string;
+  choices: { label: string; percent: number }[];
+  /** Vị trí lựa chọn mặc định trong choices */
+  default: number;
+};
+
 /** Chiết khấu tùy chọn ở cấp dự án (CK sỉ, Early Bird...), nhân viên chọn mức áp dụng */
 export type OptionalDiscount = {
   id: string;
@@ -138,6 +150,8 @@ export type Project = {
   /** Đơn giá tiền sử dụng đất (VND/m² thông thủy), trừ khỏi cơ sở tính VAT */
   landValuePerM2?: number;
   optionalDiscounts: OptionalDiscount[];
+  /** Tùy chọn cộng/trừ % vào đơn giá, nhân viên chọn khi tính (VD loại bàn giao) */
+  priceOptions?: PriceOption[];
   units: Unit[];
   methods: PaymentMethod[];
   notes?: string[];

@@ -173,3 +173,35 @@ test("lãi vay trả góp đều: ân hạn + CĐT hỗ trợ lãi rồi góp đ
   assert.equal(q.schedule[239].closing, 0);
   assert.ok(q.supportValue > 0);
 });
+
+// Imperia Sensa Park — đối chiếu "PHIẾU TẠM TÍNH GIÁ ISP.xlsx" (ví dụ trong file): căn A.10.03 (tim tường 52,2 m²),
+// đơn giá 90.000.000, bàn giao Hoàn thiện (+7%), Early Bird 2%, không Secret Box. Excel không làm tròn → cho lệch ≤ 3 đ.
+// Đã đối chiếu thêm 120 tổ hợp (3 căn × 2 loại bàn giao × EB × Secret Box × 5 PTTT) khi thêm dự án.
+test("khớp bảng tạm tính Excel — Imperia Sensa Park, cả 5 PTTT", async () => {
+  const { imperiaSensaPark: isp } = await import("../data/imperia-sensa-park/index.ts");
+  const { applyPriceOptions } = await import("./calc.ts");
+  const u = isp.units.find((x) => x.code === "A.10.03")!;
+  const listPrice = applyPriceOptions(isp, unitListPrice(isp, u), { "ban-giao": 0 });
+  assert.equal(listPrice, 5_026_860_000);
+  const cases: [string, number, number[]][] = [
+    ["pttt-chuan", 5_248_544_526, [100_000_000, 414_800_732.6, 514_800_732.6, 257_400_366.3, 257_400_366.3, 257_400_366.3, 257_400_366.3, 257_400_366.3, 2_674_540_863, 257_400_366.3]],
+    ["pttt-vay", 5_248_544_526, [100_000_000, 414_800_732.6, 514_800_732.6, 3_603_605_128.2, 357_937_566.3, 257_400_366.3]],
+    ["pttt-dac-biet", 5_248_544_526, [100_000_000, 414_800_732.6, 0, 2_831_404_029.3, 872_738_298.9, 772_201_098.9, 257_400_366.3]],
+    ["pttt-nhanh-70", 4_923_407_221.20, [100_000_000, 382_287_002.12, 482_287_002.12, 2_411_435_010.6, 1_306_254_705.3, 241_143_501.06]],
+    ["pttt-nhanh-95", 4_760_838_568.80, [100_000_000, 366_030_136.88, 466_030_136.88, 3_495_226_026.6, 100_537_200, 233_015_068.44]],
+  ];
+  for (const [id, total, schedule] of cases) {
+    const q = computeQuote(isp, isp.methods.find((m) => m.id === id)!, {
+      listPrice,
+      netArea: u.netArea,
+      optionalDiscounts: { "early-bird": 0.02, "secret-box": 0 },
+    });
+    assert.ok(Math.abs(q.total - total) <= 1, `${id}: tổng ${q.total} ≠ ${total}`);
+    assert.equal(q.maintenance, 100_537_200, id);
+    q.schedule.forEach((r, i) => assert.ok(Math.abs(r.amount - schedule[i]) <= 3, `${id} ${r.label}: ${r.amount} ≠ ${schedule[i]}`));
+    assert.equal(q.schedule.length, schedule.length, id);
+    assert.equal(q.mismatch, 0, id);
+  }
+  // Bàn giao Sáng tạo: đơn giá giữ 90.000.000
+  assert.equal(applyPriceOptions(isp, unitListPrice(isp, u), { "ban-giao": 1 }), 4_698_000_000);
+});

@@ -142,6 +142,20 @@ export function unitListPrice(
   return round(pricedArea(project, unit) * perM2);
 }
 
+/** Giá công bố sau khi áp các tùy chọn đơn giá (VD bàn giao hoàn thiện +7%) */
+export function applyPriceOptions(
+  project: Project,
+  listPrice: number,
+  chosen: Record<string, number> = {},
+): number {
+  let factor = 1;
+  for (const o of project.priceOptions ?? []) {
+    const choice = o.choices[chosen[o.id] ?? o.default] ?? o.choices[o.default];
+    factor *= 1 + (choice?.percent ?? 0);
+  }
+  return round(listPrice * factor);
+}
+
 export function computeQuote(
   project: Project,
   method: PaymentMethod,

@@ -49,6 +49,12 @@ export function validateProject(p: Project): ValidationResult {
     if (!d.options.includes(d.default)) errors.push(`Chiết khấu "${d.label}": mức mặc định phải nằm trong các mức cho chọn.`);
   }
 
+  for (const o of p.priceOptions ?? []) {
+    if (!o.id || !SLUG.test(o.id)) errors.push(`Tùy chọn đơn giá "${o.label}": mã không hợp lệ.`);
+    if (o.choices.length === 0) errors.push(`Tùy chọn đơn giá "${o.label}": chưa có lựa chọn nào.`);
+    else if (!o.choices[o.default]) errors.push(`Tùy chọn đơn giá "${o.label}": lựa chọn mặc định không hợp lệ.`);
+  }
+
   // PTTT
   if (p.methods.length === 0) errors.push("Dự án chưa có phương thức thanh toán nào.");
   const methodIds = new Set<string>();

@@ -1311,3 +1311,10 @@ label.check {
   border: 1px solid var(--border);
 }
 
+
+.price-option {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}

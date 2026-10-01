@@ -7,7 +7,7 @@ import { saveProjectAction } from "@/app/admin/actions";
 import { computeQuote, formatPercent, formatVnd, unitListPrice } from "@/lib/calc.ts";
 import { parseUnitsTable, rowsToTable, UNIT_COLUMNS, unitsToRows, unitsToTable } from "@/lib/importUnits.ts";
 import { blankMethod, blankMilestone, slugify } from "@/lib/templates.ts";
-import type { Discount, Loan, Milestone, OptionalDiscount, PaymentMethod, Project, Unit } from "@/lib/types";
+import type { Discount, Loan, Milestone, OptionalDiscount, PaymentMethod, PriceOption, Project, Unit } from "@/lib/types";
 import { validateProject } from "@/lib/validate.ts";
 import type { SheetData } from "write-excel-file/browser";
 import { move, NumberField, PercentField, PercentListField, RowTools } from "./fields";
@@ -385,6 +385,11 @@ function GeneralTab({
         </div>
       </section>
 
+      <PriceOptionsEditor
+        options={project.priceOptions ?? []}
+        onChange={(list) => update({ priceOptions: list.length ? list : undefined })}
+      />
+
       <section className="card">
         <h2>Loại sản phẩm & đơn giá tham khảo</h2>
         <p className="muted small">
@@ -527,6 +532,111 @@ function BaseSelect({ value, onChange }: { value?: "list" | "running"; onChange:
       <option value="list">Giá công bố</option>
       <option value="running">Giá sau các CK trước</option>
     </select>
+  );
+}
+
+/* ---------------- Tùy chọn đơn giá ---------------- */
+
+function PriceOptionsEditor({ options, onChange }: { options: PriceOption[]; onChange: (list: PriceOption[]) => void }) {
+  const set = (i: number, patch: Partial<PriceOption>) => onChange(options.map((o, j) => (j === i ? { ...o, ...patch } : o)));
+  return (
+    <section className="card">
+      <h2>Tùy chọn đơn giá</h2>
+      <p className="muted small">
+        Lựa chọn làm tăng/giảm đơn giá, nhân viên chọn khi tính (VD loại bàn giao: Hoàn thiện +7%, Sáng tạo 0%). Phần trăm
+        cộng vào giá công bố trước khi trừ chiết khấu.
+      </p>
+      {options.map((o, i) => (
+        <div key={i} className="price-option">
+          <div className="grid">
+            <label>
+              Tên tùy chọn
+              <input value={o.label} onChange={(e) => set(i, { label: e.target.value, id: o.id || slugify(e.target.value) })} />
+            </label>
+            <label>
+              Mặc định
+              <select value={o.default} onChange={(e) => set(i, { default: Number(e.target.value) })}>
+                {o.choices.map((c, j) => (
+                  <option key={j} value={j}>
+                    {c.label || `Lựa chọn ${j + 1}`}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <table className="edit-table">
+            <thead>
+              <tr>
+                <th>Lựa chọn</th>
+                <th>% cộng vào đơn giá</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {o.choices.map((c, j) => (
+                <tr key={j}>
+                  <td>
+                    <input
+                      value={c.label}
+                      onChange={(e) => set(i, { choices: o.choices.map((x, k) => (k === j ? { ...x, label: e.target.value } : x)) })}
+                    />
+                  </td>
+                  <td>
+                    <PercentField
+                      className="narrow"
+                      value={c.percent}
+                      onChange={(v) => set(i, { choices: o.choices.map((x, k) => (k === j ? { ...x, percent: v ?? 0 } : x)) })}
+                    />
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="danger"
+                      disabled={o.choices.length <= 1}
+                      onClick={() =>
+                        set(i, {
+                          choices: o.choices.filter((_, k) => k !== j),
+                          default: o.default === j ? 0 : o.default > j ? o.default - 1 : o.default,
+                        })
+                      }
+                    >
+                      ✕
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="actions">
+            <button type="button" onClick={() => set(i, { choices: [...o.choices, { label: "", percent: 0 }] })}>
+              + Thêm lựa chọn
+            </button>
+            <button type="button" className="danger" onClick={() => onChange(options.filter((_, k) => k !== i))}>
+              Xóa tùy chọn này
+            </button>
+          </div>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() =>
+          onChange([
+            ...options,
+            {
+              id: `tuy-chon-${options.length + 1}`,
+              label: "Loại bàn giao",
+              choices: [
+                { label: "Hoàn thiện", percent: 0 },
+                { label: "Thô", percent: 0 },
+              ],
+              default: 0,
+            },
+          ])
+        }
+      >
+        + Thêm tùy chọn đơn giá
+      </button>
+    </section>
   );
 }
 
