@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { del, get, list, put } from "@vercel/blob";
 import { unstable_cache } from "next/cache";
 import { defaultProjects } from "@/data/projects.ts";
-import { applyMigrations } from "./migrations.ts";
+import { applyMigrations, AUTO_ADD } from "./migrations.ts";
 import type { Project } from "./types";
 
 /**
@@ -95,13 +95,30 @@ export async function readProjects(): Promise<{ projects: Project[]; source: "bl
       return project;
     }),
   );
+  // Dự án mới trong code (AUTO_ADD) tự được thêm một lần; marker giúp dự án đã xóa không tự quay lại
+  for (const id of AUTO_ADD) {
+    const marker = `${PREFIX}_added_${id}.txt`;
+    const project = defaultProjects.find((p) => p.id === id);
+    if (!project || paths.includes(marker)) continue;
+    if (!projects.some((p) => p.id === id)) {
+      try {
+        const added = applyMigrations(project).project;
+        await writeProject(added);
+        projects.push(added);
+      } catch (e) {
+        console.error("auto-add failed", id, e);
+        continue;
+      }
+    }
+    await storage.write(marker, new Date().toISOString(), "text/plain").catch(() => {});
+  }
   return { projects: sortProjects(projects), source: "blob" };
 }
 
 /** Bản có cache cho trang khách — làm mới ngay khi admin lưu (updateTag) hoặc tối đa sau 1 giờ */
 export const loadProjects = unstable_cache(
   async () => (await readProjects()).projects,
-  ["projects-v3"],
+  ["projects-v4"],
   { tags: [PROJECTS_TAG], revalidate: 3600 },
 );
 

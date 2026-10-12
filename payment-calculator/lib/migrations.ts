@@ -39,6 +39,9 @@ export const migrations: Migration[] = [
   },
 ];
 
+/** Dự án mới trong code (data/) tự được thêm lên kho đã khởi tạo, không cần bấm "+ Thêm" trong admin */
+export const AUTO_ADD = ["norton-park"];
+
 /** Áp các bước chưa chạy cho dự án; changed = true nếu cần ghi lại */
 export function applyMigrations(project: Project): { project: Project; changed: boolean } {
   const done = new Set(project.migrations ?? []);

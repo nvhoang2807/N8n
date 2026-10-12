@@ -43,7 +43,8 @@ test("khớp bảng tạm tính Excel — PTTTN 70%", () => {
 
 test("mọi PTTT của mọi dự án cộng đủ 100% tổng giá trị HĐMB", () => {
   for (const project of projects) {
-    const u = project.units[0];
+    // Dự án chưa có danh sách căn (nhân viên tự nhập căn): tính thử với 1 căn 2PN 70 m², đơn giá 60 triệu
+    const u = project.units[0] ?? { code: "THU", type: Object.keys(project.unitTypes)[0], grossArea: 70, netArea: 65, price: 4_200_000_000 };
     for (const m of project.methods) {
       const q = computeQuote(project, m, {
         // Loại căn chưa có đơn giá tham khảo: dùng đơn giá cao nhất của dự án (như bước kiểm tra trong admin)

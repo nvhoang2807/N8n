@@ -1,5 +1,6 @@
 import type { Project } from "../lib/types";
 import { imperiaSensaPark } from "./imperia-sensa-park/index.ts";
+import { nortonPark } from "./norton-park/index.ts";
 import { palmRiver } from "./palm-river/index.ts";
 import { serenaRiverside } from "./serena-riverside/index.ts";
 
@@ -62,5 +63,6 @@ export const defaultProjects: Project[] = [
   { ...serenaRiverside, order: 1 },
   { ...palmRiver, order: 2 },
   { ...imperiaSensaPark, order: 3 },
+  { ...nortonPark, order: 4 },
   { ...sampleProject, order: 99, hidden: true },
 ];
