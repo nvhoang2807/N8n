@@ -46,6 +46,24 @@ export const migrations: Migration[] = [
       defaultUnitPrice: { ...p.defaultUnitPrice, "1PN": 66_000_000, "2PN": 66_000_000, "3PN": 66_000_000 },
     }),
   },
+  {
+    // Norton Park: khoản đầu là "Đặt chỗ" 100 triệu (cấn trừ vào đợt ký HĐMB)
+    id: "2026-10-norton-dat-cho-100tr",
+    projectId: "norton-park",
+    apply: (p) => ({
+      ...p,
+      methods: p.methods.map((m) => ({
+        ...m,
+        milestones: m.milestones.map((x) =>
+          x.advance && x.amount !== undefined
+            ? { ...x, label: "Đặt chỗ", due: "Đặt chỗ", amount: 100_000_000 }
+            : x.deductAdvances && x.note === "Đã cấn trừ tiền đặt cọc"
+              ? { ...x, note: "Đã cấn trừ tiền đặt chỗ" }
+              : x,
+        ),
+      })),
+    }),
+  },
 ];
 
 /** Dự án mới trong code (data/) tự được thêm lên kho đã khởi tạo, không cần bấm "+ Thêm" trong admin */

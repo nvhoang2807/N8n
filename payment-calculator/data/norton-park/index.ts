@@ -8,17 +8,17 @@ import type { Loan, Milestone, PaymentMethod, Project } from "../../lib/types";
  * Chưa có bảng giá & danh sách căn → nhân viên nhập căn (loại, diện tích, đơn giá).
  */
 
-const DEPOSIT = 100_000_000; // Sales kit chưa ghi số tiền đặt cọc — để 100 triệu, chỉnh trong admin khi có thông báo
+const DEPOSIT = 100_000_000; // Đặt chỗ 100 triệu
 const CONTRACT = "Ký HĐMB (dự kiến 12/2026)";
 const HANDOVER = "Bàn giao (dự kiến 09/2029) + Gồm phí bảo trì 2%";
 const PINK_BOOK = "Nhận sổ hồng";
 
-const deposit: Milestone = { label: "Đặt cọc", due: "Đặt cọc", amount: DEPOSIT, advance: true };
+const deposit: Milestone = { label: "Đặt chỗ", due: "Đặt chỗ", amount: DEPOSIT, advance: true };
 
 const contract = (percent: number): Milestone => ({
   label: "Đợt 1",
   due: CONTRACT,
-  note: "Đã cấn trừ tiền đặt cọc",
+  note: "Đã cấn trừ tiền đặt chỗ",
   percent,
   deductAdvances: true,
   monthsAfterContract: 0,
