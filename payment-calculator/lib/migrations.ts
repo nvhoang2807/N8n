@@ -37,6 +37,15 @@ export const migrations: Migration[] = [
       updatedAt: p.updatedAt,
     }),
   },
+  {
+    // Norton Park: đơn giá tham khảo căn hộ 66 triệu/m²
+    id: "2026-10-norton-don-gia-66tr",
+    projectId: "norton-park",
+    apply: (p) => ({
+      ...p,
+      defaultUnitPrice: { ...p.defaultUnitPrice, "1PN": 66_000_000, "2PN": 66_000_000, "3PN": 66_000_000 },
+    }),
+  },
 ];
 
 /** Dự án mới trong code (data/) tự được thêm lên kho đã khởi tạo, không cần bấm "+ Thêm" trong admin */

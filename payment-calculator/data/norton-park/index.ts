@@ -97,7 +97,8 @@ export const nortonPark: Project = {
   developer: "Gamuda Land",
   description: "Căn hộ & Shop khối đế",
   unitTypes: { "1PN": "Căn hộ 1PN", "2PN": "Căn hộ 2PN", "3PN": "Căn hộ 3PN", SHOP: "Shop khối đế" },
-  defaultUnitPrice: {},
+  // Đơn giá tham khảo 66 triệu/m² cho căn hộ (Shop khối đế chưa có giá — nhân viên tự nhập)
+  defaultUnitPrice: { "1PN": 66_000_000, "2PN": 66_000_000, "3PN": 66_000_000 },
   vatRate: 0.1,
   maintenanceRate: 0.02,
   customUnits: true,
