@@ -2,7 +2,7 @@ import type { Unit } from "../../lib/types";
 
 /** Norton Park — 63 layout (mã căn theo layout; hậu tố a: tầng 3–9, b: tầng 10–19, c: tầng 1–2; PES: căn có sân vườn).
  *  Nguồn: nortonpark.com.vn/calculator (calc-data.js, dữ liệu DATA_LOT B&C 2026-09-29).
- *  "price" = giá dự kiến trên trang (66.000.000 đ/m² × DT tim tường, chưa VAT); "direction" ghi cảnh quan (view), DT sân vườn (không tính vào giá), tháp và số căn cùng layout. */
+ *  "price" = giá dự kiến trên trang (66.000.000 đ/m² × DT tim tường, chưa VAT; Duplex & Podium Shop CĐT chưa công khai giá → tạm 70.000.000 đ/m²); "direction" ghi cảnh quan (view), DT sân vườn (không tính vào giá), tháp và số căn cùng layout. */
 export const units: Unit[] = [
 {"code":"ST1.1a","type":"Studio","direction":"View Công viên nội khu · KDC Home Canary · Tháp B2 · 7 căn","grossArea":42.12,"netArea":38.13,"price":2779920000},
 {"code":"ST1.1b","type":"Studio","direction":"View Công viên nội khu · KDC Home Canary · Tháp B2 · 10 căn","grossArea":42.32,"netArea":38.44,"price":2793120000},
@@ -55,16 +55,16 @@ export const units: Unit[] = [
 {"code":"B1.3c.PES.2","type":"PES","direction":"View Công viên nội khu · Sân vườn 31,4 m² · Tháp B2 · 2 căn","grossArea":72.22,"netArea":66.82,"price":4766520000},
 {"code":"B3.1c.PES","type":"PES","direction":"View Công viên nội khu · Sân vườn 72,8 m² · Tháp B1 · 1 căn","grossArea":76.39,"netArea":70.9,"price":5041740000},
 {"code":"C3.1c.PES","type":"PES","direction":"View Công viên nội khu · Sân vườn 64 m² · Tháp B2 · 1 căn","grossArea":95.44,"netArea":88.55,"price":6299040000},
-{"code":"D1.1c","type":"Duplex","direction":"View Công viên nội khu · Sân vườn 60,2 m² · Tháp B1, B2 · 4 căn","grossArea":139.86,"netArea":128.96,"price":9230760000},
-{"code":"D2.1c","type":"Duplex","direction":"View Công viên nội khu · Tháp B3 · 1 căn","grossArea":156.07,"netArea":143.01,"price":10300620000},
-{"code":"D1.1b","type":"Duplex","direction":"View Công viên nội khu · Tháp B2 · 4 căn","grossArea":140.21,"netArea":128.56,"price":9253860000},
-{"code":"SH01","type":"SHOP","direction":"View Phố thương mại · Tháp B1 · 1 căn","grossArea":141.7,"netArea":129.97,"price":9352200000},
-{"code":"SH02","type":"SHOP","direction":"View Phố thương mại · Tháp B1 · 1 căn","grossArea":146.4,"netArea":134.28,"price":9662400000},
-{"code":"SH03","type":"SHOP","direction":"View Phố thương mại · Tháp B1 · 1 căn","grossArea":164.88,"netArea":151.14,"price":10882080000},
-{"code":"SH04","type":"SHOP","direction":"View Công viên nội khu · Đường D3 · Sân vườn 68,1 m² · Tháp B1 · 1 căn","grossArea":189.01,"netArea":174.99,"price":12474660000},
-{"code":"SH05","type":"SHOP","direction":"View Phố thương mại · Đường D3 · Sân vườn 30 m² · Tháp B1 · 1 căn","grossArea":209.21,"netArea":193.25,"price":13807860000},
-{"code":"SH06","type":"SHOP","direction":"View Đường D3 · Đường D4 · Tháp B3 · 1 căn","grossArea":146.82,"netArea":134.98,"price":9690120000},
-{"code":"SH07","type":"SHOP","direction":"View Đường D3 · Đường D4 · Tháp B3 · 1 căn","grossArea":149.99,"netArea":137.31,"price":9899340000},
-{"code":"SH08","type":"SHOP","direction":"View Đường D3 · Đường D4 · Sân vườn 20,4 m² · Tháp B3 · 1 căn","grossArea":188.91,"netArea":172.69,"price":12468060000},
-{"code":"SH09","type":"SHOP","direction":"View Đường D3 · Sân vườn 41,4 m² · Tháp B3 · 1 căn","grossArea":255.48,"netArea":238.69,"price":16861680000},
+{"code":"D1.1c","type":"Duplex","direction":"View Công viên nội khu · Sân vườn 60,2 m² · Tháp B1, B2 · 4 căn","grossArea":139.86,"netArea":128.96,"price":9790200000},
+{"code":"D2.1c","type":"Duplex","direction":"View Công viên nội khu · Tháp B3 · 1 căn","grossArea":156.07,"netArea":143.01,"price":10924900000},
+{"code":"D1.1b","type":"Duplex","direction":"View Công viên nội khu · Tháp B2 · 4 căn","grossArea":140.21,"netArea":128.56,"price":9814700000},
+{"code":"SH01","type":"SHOP","direction":"View Phố thương mại · Tháp B1 · 1 căn","grossArea":141.7,"netArea":129.97,"price":9919000000},
+{"code":"SH02","type":"SHOP","direction":"View Phố thương mại · Tháp B1 · 1 căn","grossArea":146.4,"netArea":134.28,"price":10248000000},
+{"code":"SH03","type":"SHOP","direction":"View Phố thương mại · Tháp B1 · 1 căn","grossArea":164.88,"netArea":151.14,"price":11541600000},
+{"code":"SH04","type":"SHOP","direction":"View Công viên nội khu · Đường D3 · Sân vườn 68,1 m² · Tháp B1 · 1 căn","grossArea":189.01,"netArea":174.99,"price":13230700000},
+{"code":"SH05","type":"SHOP","direction":"View Phố thương mại · Đường D3 · Sân vườn 30 m² · Tháp B1 · 1 căn","grossArea":209.21,"netArea":193.25,"price":14644700000},
+{"code":"SH06","type":"SHOP","direction":"View Đường D3 · Đường D4 · Tháp B3 · 1 căn","grossArea":146.82,"netArea":134.98,"price":10277400000},
+{"code":"SH07","type":"SHOP","direction":"View Đường D3 · Đường D4 · Tháp B3 · 1 căn","grossArea":149.99,"netArea":137.31,"price":10499300000},
+{"code":"SH08","type":"SHOP","direction":"View Đường D3 · Đường D4 · Sân vườn 20,4 m² · Tháp B3 · 1 căn","grossArea":188.91,"netArea":172.69,"price":13223700000},
+{"code":"SH09","type":"SHOP","direction":"View Đường D3 · Sân vườn 41,4 m² · Tháp B3 · 1 căn","grossArea":255.48,"netArea":238.69,"price":17883600000},
 ];

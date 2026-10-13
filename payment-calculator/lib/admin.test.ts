@@ -134,4 +134,9 @@ test("Norton Park: 63 layout, giá khớp nortonpark.com.vn (66 triệu × DT ti
   assert.equal(c4.price, 7_500_900_000);
   assert.equal(unitListPrice(project, c4), 7_500_900_000);
   assert.equal(Math.round(c4.price! / c4.grossArea), 66_000_000);
+  // Duplex & Podium Shop: tạm 70 triệu/m²
+  for (const u of project.units.filter((x) => x.type === "Duplex" || x.type === "SHOP")) {
+    assert.equal(u.price, Math.round(u.grossArea * 70_000_000));
+  }
+  assert.equal(project.units.filter((x) => x.type === "Duplex" || x.type === "SHOP").length, 12);
 });

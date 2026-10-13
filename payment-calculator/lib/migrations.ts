@@ -91,6 +91,19 @@ export const migrations: Migration[] = [
       return { ...p, units: p.units.map((u) => byCode.get(u.code) ?? u) };
     },
   },
+  {
+    // Norton Park: Duplex & Podium Shop chưa có giá công khai → tạm 70 triệu/m² tim tường
+    id: "2026-10-norton-duplex-shop-70tr",
+    projectId: "norton-park",
+    apply: (p) => {
+      const byCode = new Map(nortonUnits.map((u) => [u.code, u]));
+      return {
+        ...p,
+        defaultUnitPrice: { ...p.defaultUnitPrice, Duplex: 70_000_000, SHOP: 70_000_000 },
+        units: p.units.map((u) => (u.type === "Duplex" || u.type === "SHOP" ? (byCode.get(u.code) ?? u) : u)),
+      };
+    },
+  },
 ];
 
 /** Dự án mới trong code (data/) tự được thêm lên kho đã khởi tạo, không cần bấm "+ Thêm" trong admin */

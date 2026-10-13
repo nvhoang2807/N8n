@@ -104,7 +104,7 @@ export const NORTON_UNIT_TYPES: Record<string, string> = {
   SHOP: "Podium Shop",
 };
 
-/** Đơn giá công bố 66 triệu/m² tim tường. Duplex & Podium Shop CĐT chưa công khai giá — nhân viên tự nhập */
+/** Đơn giá công bố 66 triệu/m² tim tường. Duplex & Podium Shop CĐT chưa công khai giá — tạm 70 triệu/m² */
 export const NORTON_UNIT_PRICE: Record<string, number> = {
   Studio: 66_000_000,
   "1PN+": 66_000_000,
@@ -112,6 +112,8 @@ export const NORTON_UNIT_PRICE: Record<string, number> = {
   "2PN+": 66_000_000,
   "3PN": 66_000_000,
   PES: 66_000_000,
+  Duplex: 70_000_000,
+  SHOP: 70_000_000,
 };
 
 export const nortonPark: Project = {
