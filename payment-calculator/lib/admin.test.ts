@@ -140,3 +140,11 @@ test("Norton Park: 63 layout, giá khớp nortonpark.com.vn (66 triệu × DT ti
   }
   assert.equal(project.units.filter((x) => x.type === "Duplex" || x.type === "SHOP").length, 12);
 });
+
+test("so sánh cấu hình bỏ qua danh sách căn nhập trên admin", async () => {
+  const { sameConfig } = await import("./types.ts");
+  const palm = defaultProjects.find((p) => p.id === "palm-river")!;
+  const extra = { code: "Z9", type: palm.units[0].type, grossArea: 80, netArea: 75 };
+  assert.ok(sameConfig({ ...palm, units: [...palm.units, extra] }, palm));
+  assert.ok(!sameConfig({ ...palm, vatRate: 0.08 }, palm));
+});

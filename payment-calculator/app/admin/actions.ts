@@ -65,6 +65,10 @@ export async function updateDefaultProjectAction(id: string): Promise<void> {
       hidden: current?.hidden ?? project.hidden,
       color: current?.color ?? project.color,
       image: current?.image ?? project.image,
+      // Giữ các căn đã nhập/upload trên admin, chỉ thêm căn trong code chưa có
+      units: current
+        ? [...current.units, ...project.units.filter((u) => !current.units.some((c) => c.code === u.code))]
+        : project.units,
       // Cấu hình trong code đã gồm các sửa đổi tự động → đánh dấu đã áp
       migrations: migrations.filter((m) => m.projectId === id).map((m) => m.id),
     },

@@ -178,8 +178,9 @@ export function sameConfig(a: Project, b: Project): boolean {
               .map(([k, x]) => [k, stable(x)]),
           )
         : v;
-  // color/image là tùy chỉnh riêng của từng dự án trên admin, không thuộc "cấu hình tính giá" nên bỏ qua khi so sánh
-  const strip = ({ updatedAt: _u, order: _o, hidden: _h, color: _c, image: _i, migrations: _m, ...rest }: Project) =>
+  // color/image là tùy chỉnh riêng của từng dự án trên admin, không thuộc "cấu hình tính giá" nên bỏ qua khi so sánh;
+  // danh sách căn do nhân viên nhập/upload Excel trên admin nên cũng không so (cập nhật từ code vẫn giữ căn đang có)
+  const strip = ({ updatedAt: _u, order: _o, hidden: _h, color: _c, image: _i, migrations: _m, units: _n, ...rest }: Project) =>
     JSON.stringify(stable(rest));
   return strip(a) === strip(b);
 }
