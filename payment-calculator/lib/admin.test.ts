@@ -129,4 +129,9 @@ test("Norton Park: 63 layout, giá khớp nortonpark.com.vn (66 triệu × DT ti
   assert.equal(project.units.length, 64);
   assert.equal(project.defaultUnitPrice.PES, 66_000_000);
   assert.ok(validateProject(project).errors.length === 0);
+  // Giá từng căn như trên trang: C4.1a 7.500.900.000 đ → đơn giá quy ra 66 triệu/m² × 113,65 m²
+  const c4 = project.units.find((u) => u.code === "C4.1a")!;
+  assert.equal(c4.price, 7_500_900_000);
+  assert.equal(unitListPrice(project, c4), 7_500_900_000);
+  assert.equal(Math.round(c4.price! / c4.grossArea), 66_000_000);
 });

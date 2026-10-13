@@ -205,6 +205,7 @@ export default function Calculator({
           project.unitTypes[u.type] ?? u.type,
           u.bedrooms !== undefined ? `${u.bedrooms}PN` : "",
           `${pricedAreaOf(project, u)} m²`,
+          u.price !== undefined ? `${formatVnd(u.price)} đ` : "",
         ]
           .filter(Boolean)
           .join(" · "),
@@ -236,9 +237,11 @@ export default function Calculator({
 
   const update = (patch: Partial<State>) => setState((s) => (s ? { ...s, ...patch } : s));
   const selected = quotes.find((q) => q.method.id === state.methodId) ?? quotes[0];
-  const fixedPrice = unit?.price !== undefined && !state.unitPrice;
   const priceType = customMode ? state.customType : unit?.type;
-  const defaultPerM2 = priceType ? project.defaultUnitPrice[priceType] : undefined;
+  // Căn có giá công bố riêng → đơn giá quy ra = giá căn ÷ diện tích tính giá
+  const unitArea = unit ? pricedAreaOf(project, unit) : 0;
+  const unitPerM2 = !customMode && unit?.price !== undefined && unitArea > 0 ? Math.round(unit.price / unitArea) : undefined;
+  const defaultPerM2 = unitPerM2 ?? (priceType ? project.defaultUnitPrice[priceType] : undefined);
   const areaName = project.priceArea === "net" ? "thông thủy" : "tim tường";
   const maxMethodDiscount = selected?.method.discounts[0]?.percent;
 
@@ -377,7 +380,7 @@ export default function Calculator({
               </label>
             </>
           )}
-          {((unit && !fixedPrice) || customMode) && (
+          {(unit || customMode) && (
             <label>
               Đơn giá (đ/m² {areaName})
               <input
@@ -385,7 +388,11 @@ export default function Calculator({
                 value={formatVnd(Number(state.unitPrice || defaultPerM2 || 0))}
                 onChange={(e) => update({ unitPrice: digits(e.target.value) })}
               />
-              {!state.unitPrice && defaultPerM2 ? (
+              {!state.unitPrice && unitPerM2 !== undefined && unit?.price !== undefined ? (
+                <small className="muted">
+                  Quy ra từ giá căn {formatVnd(unit.price)} đ ÷ {unitArea} m² — sửa nếu bảng giá khác
+                </small>
+              ) : !state.unitPrice && defaultPerM2 ? (
                 <small className="muted">Đơn giá tham khảo theo loại căn — sửa theo bảng giá thực tế</small>
               ) : null}
               {(() => {

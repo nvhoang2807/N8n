@@ -82,6 +82,15 @@ export const migrations: Migration[] = [
       };
     },
   },
+  {
+    // Norton Park: mỗi layout có giá dự kiến riêng như trên nortonpark.com.vn (đơn giá quy ra = giá ÷ DT tim tường)
+    id: "2026-10-norton-gia-tung-can",
+    projectId: "norton-park",
+    apply: (p) => {
+      const byCode = new Map(nortonUnits.map((u) => [u.code, u]));
+      return { ...p, units: p.units.map((u) => byCode.get(u.code) ?? u) };
+    },
+  },
 ];
 
 /** Dự án mới trong code (data/) tự được thêm lên kho đã khởi tạo, không cần bấm "+ Thêm" trong admin */
