@@ -169,6 +169,8 @@ export default function Calculator({
   const [advisor, setAdvisor] = useState({ name: "", phone: "" });
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
+  /** Lọc danh sách mã căn theo loại căn; rỗng = tất cả */
+  const [typeFilter, setTypeFilter] = useState("");
 
   useEffect(() => {
     setState(stateFromUrl(project));
@@ -197,9 +199,19 @@ export default function Calculator({
   const perM2 = state?.unitPrice ? Number(state.unitPrice) : undefined;
   const listPrice = unit ? applyPriceOptions(project, unitListPrice(project, unit, perM2), state?.priceOpts) : 0;
 
+  // Các loại căn có trong danh sách (theo thứ tự khai báo của dự án) kèm số mã căn
+  const listedTypes = useMemo(() => {
+    const count = new Map<string, number>();
+    for (const u of project.units) count.set(u.type, (count.get(u.type) ?? 0) + 1);
+    const order = Object.keys(project.unitTypes);
+    return [...count.entries()]
+      .sort(([a], [b]) => (order.indexOf(a) + 1 || 999) - (order.indexOf(b) + 1 || 999))
+      .map(([type, n]) => ({ type, n, label: project.unitTypes[type] ?? type }));
+  }, [project]);
+
   const unitOptions = useMemo(
     () =>
-      project.units.map((u) => ({
+      project.units.filter((u) => !typeFilter || u.type === typeFilter).map((u) => ({
         code: u.code,
         detail: [
           project.unitTypes[u.type] ?? u.type,
@@ -210,7 +222,7 @@ export default function Calculator({
           .filter(Boolean)
           .join(" · "),
       })),
-    [project],
+    [project, typeFilter],
   );
 
   const quotes = useMemo(() => {
@@ -337,6 +349,28 @@ export default function Calculator({
               ))}
             </select>
           </label>
+          {listedTypes.length > 1 && !customMode && (
+            <label>
+              Loại căn
+              <select
+                value={typeFilter}
+                onChange={(e) => {
+                  const type = e.target.value;
+                  setTypeFilter(type);
+                  // Đổi sang loại khác → chọn sẵn mã căn đầu tiên của loại đó
+                  const first = project.units.find((u) => u.type === type);
+                  if (type && first && listedUnit?.type !== type) update({ unitCode: first.code, unitPrice: "" });
+                }}
+              >
+                <option value="">Tất cả loại căn ({project.units.length})</option>
+                {listedTypes.map((t) => (
+                  <option key={t.type} value={t.type}>
+                    {t.label} ({t.n})
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label>
             Mã căn
             <UnitPicker
