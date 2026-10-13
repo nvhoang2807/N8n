@@ -116,3 +116,17 @@ test("tự sửa dữ liệu đã lưu: bỏ CK 5% PTTT Vay & Đặc biệt (Imp
   // Dự án khác không bị đụng tới
   assert.equal(applyMigrations(defaultProjects[0]).changed, false);
 });
+
+test("Norton Park: 63 layout, giá khớp nortonpark.com.vn (66 triệu × DT tim tường)", async () => {
+  const { unitListPrice } = await import("./calc.ts");
+  const { applyMigrations } = await import("./migrations.ts");
+  const norton = defaultProjects.find((p) => p.id === "norton-park")!;
+  assert.equal(norton.units.length, 63);
+  assert.equal(unitListPrice(norton, norton.units.find((u) => u.code === "ST1.1a")!), 2_779_920_000);
+  // Dữ liệu cũ trên Blob (chưa có căn) nhận đủ 63 layout, giữ căn nhập tay
+  const old = { ...norton, units: [{ code: "X1", type: "2PN", grossArea: 70, netArea: 65 }], migrations: [] };
+  const { project } = applyMigrations(old);
+  assert.equal(project.units.length, 64);
+  assert.equal(project.defaultUnitPrice.PES, 66_000_000);
+  assert.ok(validateProject(project).errors.length === 0);
+});

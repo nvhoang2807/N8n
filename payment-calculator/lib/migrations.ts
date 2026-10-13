@@ -1,4 +1,6 @@
 import { imperiaSensaPark } from "../data/imperia-sensa-park/index.ts";
+import { NORTON_UNIT_PRICE, NORTON_UNIT_TYPES } from "../data/norton-park/index.ts";
+import { units as nortonUnits } from "../data/norton-park/units.ts";
 import type { Project } from "./types";
 
 /**
@@ -63,6 +65,22 @@ export const migrations: Migration[] = [
         ),
       })),
     }),
+  },
+  {
+    // Norton Park: 63 layout (mã, cảnh quan, DT tim tường/thông thủy) từ nortonpark.com.vn/calculator;
+    // giữ các căn đã nhập tay trong admin nếu mã chưa có trong danh sách
+    id: "2026-10-norton-63-layout",
+    projectId: "norton-park",
+    apply: (p) => {
+      const codes = new Set(nortonUnits.map((u) => u.code));
+      return {
+        ...p,
+        description: "Phân khu B · 63 layout căn hộ, Duplex & Podium Shop",
+        unitTypes: { ...p.unitTypes, ...NORTON_UNIT_TYPES },
+        defaultUnitPrice: { ...p.defaultUnitPrice, ...NORTON_UNIT_PRICE },
+        units: [...nortonUnits, ...p.units.filter((u) => !codes.has(u.code))],
+      };
+    },
   },
 ];
 

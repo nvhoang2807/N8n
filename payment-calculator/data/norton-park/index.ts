@@ -1,3 +1,4 @@
+import { units } from "./units.ts";
 import type { Loan, Milestone, PaymentMethod, Project } from "../../lib/types";
 
 /**
@@ -91,21 +92,42 @@ const BANK_LOAN: Loan = {
   gracePrincipalMonths: 24,
 };
 
+/** Loại sản phẩm theo bảng tính giá trên nortonpark.com.vn */
+export const NORTON_UNIT_TYPES: Record<string, string> = {
+  Studio: "Studio",
+  "1PN+": "Căn hộ 1PN+",
+  "2PN": "Căn hộ 2PN",
+  "2PN+": "Căn hộ 2PN+",
+  "3PN": "Căn hộ 3PN",
+  PES: "Căn hộ sân vườn",
+  Duplex: "Duplex",
+  SHOP: "Podium Shop",
+};
+
+/** Đơn giá công bố 66 triệu/m² tim tường. Duplex & Podium Shop CĐT chưa công khai giá — nhân viên tự nhập */
+export const NORTON_UNIT_PRICE: Record<string, number> = {
+  Studio: 66_000_000,
+  "1PN+": 66_000_000,
+  "2PN": 66_000_000,
+  "2PN+": 66_000_000,
+  "3PN": 66_000_000,
+  PES: 66_000_000,
+};
+
 export const nortonPark: Project = {
   id: "norton-park",
   name: "Norton Park",
   developer: "Gamuda Land",
-  description: "Căn hộ & Shop khối đế",
-  unitTypes: { "1PN": "Căn hộ 1PN", "2PN": "Căn hộ 2PN", "3PN": "Căn hộ 3PN", SHOP: "Shop khối đế" },
-  // Đơn giá tham khảo 66 triệu/m² cho căn hộ (Shop khối đế chưa có giá — nhân viên tự nhập)
-  defaultUnitPrice: { "1PN": 66_000_000, "2PN": 66_000_000, "3PN": 66_000_000 },
+  description: "Phân khu B · 63 layout căn hộ, Duplex & Podium Shop",
+  unitTypes: NORTON_UNIT_TYPES,
+  defaultUnitPrice: NORTON_UNIT_PRICE,
   vatRate: 0.1,
   maintenanceRate: 0.02,
   customUnits: true,
   optionalDiscounts: [
     { id: "early-bird", label: "Chiết khấu đặt chỗ sớm (Early Bird)", options: [0, 0.01], default: 0, base: "list" },
   ],
-  units: [],
+  units,
   methods: [
     method("pttt-chuan", "Thanh toán chuẩn", "CK 5% · 15% ký HĐMB, 3 tháng/đợt, 35% khi bàn giao", 0.05, [
       deposit,
