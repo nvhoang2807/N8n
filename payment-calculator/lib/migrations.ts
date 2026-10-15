@@ -1,4 +1,5 @@
 import { imperiaSensaPark } from "../data/imperia-sensa-park/index.ts";
+import { specialMethod as serenaSpecialMethod } from "../data/serena-riverside/index.ts";
 import { NORTON_UNIT_PRICE, NORTON_UNIT_TYPES } from "../data/norton-park/index.ts";
 import { units as nortonUnits } from "../data/norton-park/units.ts";
 import type { Project } from "./types";
@@ -103,6 +104,13 @@ export const migrations: Migration[] = [
         units: p.units.map((u) => (u.type === "Duplex" || u.type === "SHOP" ? (byCode.get(u.code) ?? u) : u)),
       };
     },
+  },
+  {
+    // Serena Riverside: thêm PTTT Đặc biệt (Tờ trình 13/10/2026), giữ nguyên các PTTT đang có
+    id: "2026-10-serena-pttt-dac-biet",
+    projectId: "serena-riverside",
+    apply: (p) =>
+      p.methods.some((m) => m.id === serenaSpecialMethod.id) ? p : { ...p, methods: [...p.methods, serenaSpecialMethod] },
   },
 ];
 

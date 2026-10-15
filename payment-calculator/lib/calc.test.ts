@@ -207,3 +207,17 @@ test("khớp bảng tạm tính Excel — Imperia Sensa Park, cả 5 PTTT", asyn
   // Bàn giao Sáng tạo: đơn giá giữ 90.000.000
   assert.equal(applyPriceOptions(isp, unitListPrice(isp, u), { "ban-giao": 1 }), 4_698_000_000);
 });
+
+test("Serena PTTT Đặc biệt: 25 đợt, tổng 100%, NH giải ngân 30% khi bàn giao", async () => {
+  const { serenaRiverside } = await import("../data/serena-riverside/index.ts");
+  const { computeQuote, unitListPrice } = await import("./calc.ts");
+  const m = serenaRiverside.methods.find((x) => x.id === "pttt-dac-biet")!;
+  const unit = serenaRiverside.units[0];
+  const q = computeQuote(serenaRiverside, m, { listPrice: unitListPrice(serenaRiverside, unit), netArea: unit.netArea, optionalDiscounts: {} });
+  const rows = q.schedule.filter((r) => r.label.startsWith("Đợt"));
+  assert.equal(rows.length, 25);
+  assert.ok(Math.abs(q.mismatch) < 5, `lệch ${q.mismatch}`);
+  assert.ok(q.bankPays > 0.29 * q.total && q.bankPays < 0.31 * q.total);
+  const bank = q.schedule.find((r) => r.label === "Đợt 23")!;
+  assert.equal(bank.payer, "bank");
+});

@@ -114,7 +114,7 @@ test("tự sửa dữ liệu đã lưu: bỏ CK 5% PTTT Vay & Đặc biệt (Imp
   assert.deepEqual(project.methods, isp.methods);
   assert.equal(applyMigrations(project).changed, false);
   // Dự án khác không bị đụng tới
-  assert.equal(applyMigrations(defaultProjects[0]).changed, false);
+  assert.equal(applyMigrations(defaultProjects.find((p) => p.id === "palm-river")!).changed, false);
 });
 
 test("Norton Park: 63 layout, giá khớp nortonpark.com.vn (66 triệu × DT tim tường)", async () => {

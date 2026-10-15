@@ -117,12 +117,52 @@ function loanMethod(
   };
 }
 
+/** Giả định khoản vay (nhân viên có thể chỉnh trên giao diện) */
+const LOAN_DEFAULTS = { termYears: 20, rateAfter: 0.1, bank: "Ngân hàng tài trợ dự án" };
+
+/**
+ * PTTT Đặc biệt (Tờ trình PTTT SRN đặc biệt, 13/10/2026): Đợt 1 10% + Đợt 2 10% (1 tháng sau HĐMB),
+ * Đợt 3–22 mỗi tháng 1%, Đợt 23 ngân hàng giải ngân 30% khi bàn giao, Đợt 24 25% + PBT, Đợt 25 GCN 5%.
+ * Không có chiết khấu PTTT. CĐT hỗ trợ 100% lãi suất 12 tháng cho khoản vay Đợt 23, ân hạn gốc 24 tháng.
+ */
+export const specialMethod: PaymentMethod = {
+  id: "pttt-dac-biet",
+  name: "PTTT Đặc biệt",
+  summary: "40% trong 21 tháng · NH giải ngân 30% khi bàn giao · CĐT hỗ trợ 100% lãi suất 12 tháng",
+  discounts: [],
+  milestones: [
+    ...head(0.1),
+    ...[0.1, ...Array(20).fill(0.01)].map(
+      (percent: number, i): Milestone => ({
+        label: `Đợt ${i + 2}`,
+        due: `${String(i + 1).padStart(2, "0")} tháng kể từ ngày ký HĐMB`,
+        note: constructionNote(i + 1),
+        percent,
+        monthsAfterContract: i + 1,
+      }),
+    ),
+    {
+      label: "Đợt 23",
+      due: HANDOVER,
+      note: "Ngân hàng giải ngân 100% Đợt 23 (KH đã ký Thỏa thuận 3 bên và Thỏa thuận hỗ trợ lãi suất)",
+      percent: 0.3,
+      payer: "bank",
+    },
+    ...tail(24),
+  ],
+  loan: {
+    ...LOAN_DEFAULTS,
+    policy:
+      "CĐT hỗ trợ 100% lãi suất vay trong 12 tháng cho Đợt 23, ân hạn gốc 24 tháng. Chỉ áp dụng sau khi KH đã thanh toán đủ 65% giá trị HĐMB và 2% phí bảo trì, ký Thỏa thuận 3 bên và Thỏa thuận hỗ trợ lãi suất.",
+    supportMonths: 12,
+    customerRate: 0,
+    gracePrincipalMonths: 24,
+  },
+};
+
 function formatPct(p: number): string {
   return `${Math.round(p * 1000) / 10}%`;
 }
-
-/** Giả định khoản vay (nhân viên có thể chỉnh trên giao diện) */
-const LOAN_DEFAULTS = { termYears: 20, rateAfter: 0.1, bank: "Ngân hàng tài trợ dự án" };
 
 export const serenaRiverside: Project = {
   id: "serena-riverside",
@@ -226,6 +266,7 @@ export const serenaRiverside: Project = {
         gracePrincipalMonths: 24,
       },
     ),
+    specialMethod,
   ],
   notes: [
     "Các chiết khấu được tính trên giá trị căn hộ ban hành chưa VAT, chưa phí bảo trì.",
