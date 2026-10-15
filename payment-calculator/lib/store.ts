@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { del, get, list, put } from "@vercel/blob";
 import { unstable_cache } from "next/cache";
 import { defaultProjects } from "@/data/projects.ts";
-import { applyMigrations, AUTO_ADD } from "./migrations.ts";
+import { applyMigrations, AUTO_ADD, migrations } from "./migrations.ts";
 import type { Project } from "./types";
 
 /**
@@ -115,10 +115,14 @@ export async function readProjects(): Promise<{ projects: Project[]; source: "bl
   return { projects: sortProjects(projects), source: "blob" };
 }
 
-/** Bản có cache cho trang khách — làm mới ngay khi admin lưu (updateTag) hoặc tối đa sau 1 giờ */
+/**
+ * Bản có cache cho trang khách — làm mới ngay khi admin lưu (updateTag) hoặc tối đa sau 1 giờ.
+ * Cache dữ liệu của Vercel giữ qua các lần deploy, nên khóa cache gồm danh sách bước sửa tự động
+ * và dự án tự thêm: deploy có thay đổi dữ liệu mới sẽ đọc lại ngay thay vì chờ hết 1 giờ.
+ */
 export const loadProjects = unstable_cache(
   async () => (await readProjects()).projects,
-  ["projects-v4"],
+  ["projects-v5", ...migrations.map((m) => m.id), ...AUTO_ADD.map((id) => `add:${id}`)],
   { tags: [PROJECTS_TAG], revalidate: 3600 },
 );
 
