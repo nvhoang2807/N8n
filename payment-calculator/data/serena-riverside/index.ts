@@ -192,6 +192,7 @@ export const serenaRiverside: Project = {
   ],
   units,
   methods: [
+    specialMethod,
     {
       id: "pttt-chuan",
       name: "PTTT Chuẩn",
@@ -266,7 +267,6 @@ export const serenaRiverside: Project = {
         gracePrincipalMonths: 24,
       },
     ),
-    specialMethod,
   ],
   notes: [
     "Các chiết khấu được tính trên giá trị căn hộ ban hành chưa VAT, chưa phí bảo trì.",

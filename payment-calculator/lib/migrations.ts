@@ -112,6 +112,18 @@ export const migrations: Migration[] = [
     apply: (p) =>
       p.methods.some((m) => m.id === serenaSpecialMethod.id) ? p : { ...p, methods: [...p.methods, serenaSpecialMethod] },
   },
+  {
+    // Serena Riverside: đưa PTTT Đặc biệt lên đầu danh sách
+    id: "2026-10-serena-dac-biet-len-dau",
+    projectId: "serena-riverside",
+    apply: (p) => ({
+      ...p,
+      methods: [
+        ...p.methods.filter((m) => m.id === serenaSpecialMethod.id),
+        ...p.methods.filter((m) => m.id !== serenaSpecialMethod.id),
+      ],
+    }),
+  },
 ];
 
 /** Dự án mới trong code (data/) tự được thêm lên kho đã khởi tạo, không cần bấm "+ Thêm" trong admin */
