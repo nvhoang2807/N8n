@@ -208,16 +208,17 @@ test("khớp bảng tạm tính Excel — Imperia Sensa Park, cả 5 PTTT", asyn
   assert.equal(applyPriceOptions(isp, unitListPrice(isp, u), { "ban-giao": 1 }), 4_698_000_000);
 });
 
-test("Serena PTTT Đặc biệt: 25 đợt, tổng 100%, NH giải ngân 30% khi bàn giao", async () => {
+test("Serena PTTT Đặc biệt 1 & 2: tổng 100%, ngân hàng giải ngân 30% / 55%", async () => {
   const { serenaRiverside } = await import("../data/serena-riverside/index.ts");
   const { computeQuote, unitListPrice } = await import("./calc.ts");
-  const m = serenaRiverside.methods.find((x) => x.id === "pttt-dac-biet")!;
   const unit = serenaRiverside.units[0];
-  const q = computeQuote(serenaRiverside, m, { listPrice: unitListPrice(serenaRiverside, unit), netArea: unit.netArea, optionalDiscounts: {} });
-  const rows = q.schedule.filter((r) => r.label.startsWith("Đợt"));
-  assert.equal(rows.length, 25);
-  assert.ok(Math.abs(q.mismatch) < 5, `lệch ${q.mismatch}`);
-  assert.ok(q.bankPays > 0.29 * q.total && q.bankPays < 0.31 * q.total);
-  const bank = q.schedule.find((r) => r.label === "Đợt 23")!;
-  assert.equal(bank.payer, "bank");
+  for (const [id, bankShare, last] of [["pttt-dac-biet", 0.3, "Đợt 25"], ["pttt-dac-biet-2", 0.55, "Đợt 24"]] as const) {
+    const m = serenaRiverside.methods.find((x) => x.id === id)!;
+    const q = computeQuote(serenaRiverside, m, { listPrice: unitListPrice(serenaRiverside, unit), netArea: unit.netArea, optionalDiscounts: {} });
+    assert.ok(Math.abs(q.mismatch) < 5, `${id} lệch ${q.mismatch}`);
+    assert.equal(q.schedule.at(-1)!.label, last);
+    const bank = q.schedule.filter((r) => r.payer === "bank").reduce((s, r) => s + r.amount, 0);
+    const base = q.total - q.maintenance;
+    assert.ok(Math.abs(bank / base - bankShare) < 0.001, `${id} NH ${bank / base}`);
+  }
 });

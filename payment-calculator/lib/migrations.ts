@@ -1,5 +1,5 @@
 import { imperiaSensaPark } from "../data/imperia-sensa-park/index.ts";
-import { specialMethod as serenaSpecialMethod } from "../data/serena-riverside/index.ts";
+import { specialMethod as serenaSpecialMethod, specialMethod2 as serenaSpecialMethod2 } from "../data/serena-riverside/index.ts";
 import { NORTON_UNIT_PRICE, NORTON_UNIT_TYPES } from "../data/norton-park/index.ts";
 import { units as nortonUnits } from "../data/norton-park/units.ts";
 import type { Project } from "./types";
@@ -121,6 +121,20 @@ export const migrations: Migration[] = [
       methods: [
         ...p.methods.filter((m) => m.id === serenaSpecialMethod.id),
         ...p.methods.filter((m) => m.id !== serenaSpecialMethod.id),
+      ],
+    }),
+  },
+  {
+    // Serena Riverside: PTTT Đặc biệt 1 & 2 theo Thông báo 11/2026/TB-ĐP (ký quỹ 5%, ghi chú tiến độ mới),
+    // thay bản Đặc biệt cũ, đặt cả hai lên đầu danh sách
+    id: "2026-10-serena-dac-biet-1-2",
+    projectId: "serena-riverside",
+    apply: (p) => ({
+      ...p,
+      methods: [
+        serenaSpecialMethod,
+        serenaSpecialMethod2,
+        ...p.methods.filter((m) => m.id !== serenaSpecialMethod.id && m.id !== serenaSpecialMethod2.id),
       ],
     }),
   },

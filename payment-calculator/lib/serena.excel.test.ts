@@ -36,6 +36,6 @@ test("Serena: khớp file Excel Final 2 — đủ 10 PTTT, từng đợt", () =>
 test("Serena: VBTT = 5% giá công bố − tiền cọc", () => {
   const unit = srn.units.find((u) => u.code === "A-04-01")!;
   const listPrice = unitListPrice(srn, unit, 60_000_000);
-  const q = computeQuote(srn, srn.methods[0], { listPrice, netArea: unit.netArea });
+  const q = computeQuote(srn, srn.methods.find((m) => m.id === "pttt-chuan")!, { listPrice, netArea: unit.netArea });
   assert.equal(q.schedule[1].amount, Math.round(listPrice * 0.05) - 50_000_000);
 });
