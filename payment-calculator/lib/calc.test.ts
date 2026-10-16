@@ -221,4 +221,19 @@ test("Serena PTTT Đặc biệt 1 & 2: tổng 100%, ngân hàng giải ngân 30%
     const base = q.total - q.maintenance;
     assert.ok(Math.abs(bank / base - bankShare) < 0.001, `${id} NH ${bank / base}`);
   }
+  // Tự thanh toán Đợt 23: không vay, CK 2.5% giá trị HĐMB (gồm VAT) trừ vào Đợt 23 và vào tổng
+  for (const [id, loanId] of [["pttt-dac-biet-tu-tt", "pttt-dac-biet"], ["pttt-dac-biet-2-tu-tt", "pttt-dac-biet-2"]] as const) {
+    const get = (mid: string) =>
+      computeQuote(serenaRiverside, serenaRiverside.methods.find((x) => x.id === mid)!, {
+        listPrice: unitListPrice(serenaRiverside, unit),
+        netArea: unit.netArea,
+        optionalDiscounts: {},
+      });
+    const self = get(id);
+    const withLoan = get(loanId);
+    assert.equal(self.bankPays, 0);
+    assert.equal(self.paymentDiscount, Math.round(self.priceWithVat * 0.025));
+    assert.equal(withLoan.total - self.total, self.paymentDiscount);
+    assert.ok(Math.abs(self.mismatch) < 5, `${id} lệch ${self.mismatch}`);
+  }
 });

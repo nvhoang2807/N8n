@@ -159,8 +159,10 @@ function specialHead(): Milestone[] {
 }
 
 const BANK_NOTE = "Ngân hàng giải ngân 100% Đợt 23 (KH đã ký Thỏa thuận 3 bên và Thỏa thuận hỗ trợ lãi suất với CĐT và Ngân hàng)";
-const SPECIAL_CONDITION =
-  "Chỉ áp dụng sau khi KH đã thanh toán đủ 65% giá trị HĐMB và 2% phí bảo trì, ký Thỏa thuận 3 bên và Thỏa thuận hỗ trợ lãi suất.";
+const SELF_PAY_NOTE = "KH không chọn hỗ trợ lãi suất, tự thanh toán Đợt 23 → CK 2.5% giá trị HĐMB, trừ vào đợt này";
+const condition = (paidPercent: string) =>
+  `Chỉ áp dụng sau khi KH đã thanh toán đủ ${paidPercent} giá trị HĐMB và 2% phí bảo trì, ký Thỏa thuận 3 bên và Thỏa thuận hỗ trợ lãi suất. ` +
+  "Nếu KH không chọn hỗ trợ lãi suất mà tự thanh toán Đợt 23 sẽ được CK 2.5% giá trị HĐMB khi thanh toán bàn giao nhà.";
 
 /**
  * PTTT Đặc biệt 1 (Thông báo 11/2026/TB-ĐP ngày 13/10/2026): 40% trong 21 tháng,
@@ -180,16 +182,30 @@ export const specialMethod: PaymentMethod = {
   ],
   loan: {
     ...LOAN_DEFAULTS,
-    policy: `CĐT hỗ trợ 100% lãi suất vay trong 12 tháng cho Đợt 23, ân hạn gốc 24 tháng. ${SPECIAL_CONDITION}`,
+    policy: `CĐT hỗ trợ 100% lãi suất vay trong 12 tháng cho Đợt 23 (30%), ân hạn gốc 24 tháng. ${condition("65%")}`,
     supportMonths: 12,
     customerRate: 0,
     gracePrincipalMonths: 24,
   },
 };
 
+/** PTTT Đặc biệt 1 khi KH tự thanh toán Đợt 23 (không vay): CK 2.5% giá trị HĐMB trừ vào Đợt 23 */
+export const specialMethodSelfPay: PaymentMethod = {
+  id: "pttt-dac-biet-tu-tt",
+  name: "PTTT Đặc biệt 1 – Tự thanh toán Đợt 23",
+  summary: "Như Đặc biệt 1, KH tự trả 30% Đợt 23 · CK 2.5% giá trị HĐMB khi bàn giao",
+  discounts: [],
+  milestones: [
+    ...specialHead(),
+    { label: "Đợt 23", due: HANDOVER, note: SELF_PAY_NOTE, percent: 0.3, paymentDiscount: 0.025 },
+    { label: "Đợt 24", due: `${HANDOVER} + 2% Phí bảo trì`, percent: 0.25, includeMaintenance: true },
+    { label: "Đợt 25", due: CERTIFICATE, percent: 0.05, remainder: true },
+  ],
+};
+
 /**
- * PTTT Đặc biệt 2 (cùng thông báo): 40% trong 21 tháng, Đợt 23 ngân hàng giải ngân 55% khi bàn giao
- * (KH tự đóng 2% PBT), Đợt 24 GCN 5%. CĐT hỗ trợ 100% lãi suất 06 tháng, ân hạn gốc 24 tháng.
+ * PTTT Đặc biệt 2 (Thông báo 12/2026/TB-ĐP ngày 13/10/2026): 40% trong 21 tháng, Đợt 23 55% + 2% PBT
+ * khi bàn giao (ngân hàng giải ngân 55%, KH đóng PBT), Đợt 24 GCN 5%. CĐT hỗ trợ 100% lãi suất 06 tháng, ân hạn gốc 24 tháng.
  */
 export const specialMethod2: PaymentMethod = {
   id: "pttt-dac-biet-2",
@@ -210,12 +226,35 @@ export const specialMethod2: PaymentMethod = {
   ],
   loan: {
     ...LOAN_DEFAULTS,
-    policy: `CĐT hỗ trợ 100% lãi suất vay trong 06 tháng cho Đợt 23, ân hạn gốc 24 tháng. ${SPECIAL_CONDITION}`,
+    policy: `CĐT hỗ trợ 100% lãi suất vay trong 06 tháng cho Đợt 23 (55%), ân hạn gốc 24 tháng. ${condition("40%")}`,
     supportMonths: 6,
     customerRate: 0,
     gracePrincipalMonths: 24,
   },
 };
+
+/** PTTT Đặc biệt 2 khi KH tự thanh toán Đợt 23 (không vay): CK 2.5% giá trị HĐMB trừ vào Đợt 23 */
+export const specialMethod2SelfPay: PaymentMethod = {
+  id: "pttt-dac-biet-2-tu-tt",
+  name: "PTTT Đặc biệt 2 – Tự thanh toán Đợt 23",
+  summary: "Như Đặc biệt 2, KH tự trả 55% Đợt 23 · CK 2.5% giá trị HĐMB khi bàn giao",
+  discounts: [],
+  milestones: [
+    ...specialHead(),
+    {
+      label: "Đợt 23",
+      due: `${HANDOVER} + 2% Phí bảo trì`,
+      note: SELF_PAY_NOTE,
+      percent: 0.55,
+      includeMaintenance: true,
+      paymentDiscount: 0.025,
+    },
+    { label: "Đợt 24", due: CERTIFICATE, percent: 0.05, remainder: true },
+  ],
+};
+
+/** Thứ tự hiển thị đầu danh sách PTTT của Serena */
+export const SPECIAL_METHODS = [specialMethod, specialMethodSelfPay, specialMethod2, specialMethod2SelfPay];
 
 function formatPct(p: number): string {
   return `${Math.round(p * 1000) / 10}%`;
@@ -249,8 +288,7 @@ export const serenaRiverside: Project = {
   ],
   units,
   methods: [
-    specialMethod,
-    specialMethod2,
+    ...SPECIAL_METHODS,
     {
       id: "pttt-chuan",
       name: "PTTT Chuẩn",

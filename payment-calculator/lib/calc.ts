@@ -1,4 +1,4 @@
-import type { Discount, Loan, PaymentMethod, Project } from "./types";
+import type { Discount, Loan, Milestone, PaymentMethod, Project } from "./types";
 
 export type DiscountLine = { label: string; percent: number; amount: number };
 
@@ -77,6 +77,8 @@ export type Quote = {
   /** Giá trị căn hộ gồm VAT, chưa phí bảo trì — cơ sở tính % tiến độ */
   priceWithVat: number;
   maintenance: number;
+  /** Chiết khấu trừ vào các đợt thanh toán (Milestone.paymentDiscount) */
+  paymentDiscount: number;
   /** Tổng giá trị HĐMB gồm VAT và phí bảo trì */
   total: number;
   schedule: ScheduleRow[];
@@ -196,7 +198,9 @@ export function computeQuote(
   const priceWithVat = netPrice + vat;
   const maintenanceBase = project.maintenanceBase === "list" ? listPrice : netPrice;
   const maintenance = round(maintenanceBase * project.maintenanceRate);
-  const total = priceWithVat + maintenance;
+  const milestoneDiscount = (m: Milestone) => (m.paymentDiscount ? round(priceWithVat * m.paymentDiscount) : 0);
+  const paymentDiscount = method.milestones.reduce((s, m) => s + milestoneDiscount(m), 0);
+  const total = priceWithVat + maintenance - paymentDiscount;
 
   let pendingAdvances = 0;
   let cumulative = 0;
@@ -218,6 +222,7 @@ export function computeQuote(
       }
       if (m.advance) pendingAdvances += gross;
       if (m.includeMaintenance) amount += maintenance;
+      amount -= milestoneDiscount(m);
     }
     cumulative += amount;
 
@@ -254,6 +259,7 @@ export function computeQuote(
     vat,
     priceWithVat,
     maintenance,
+    paymentDiscount,
     total,
     schedule,
     customerPays: cumulative - bankPays,

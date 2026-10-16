@@ -64,6 +64,11 @@ export type Milestone = {
   deductAdvances?: boolean;
   /** Cộng phí bảo trì vào đợt này */
   includeMaintenance?: boolean;
+  /**
+   * Chiết khấu tại đợt này, tính theo tỷ lệ trên Giá trị căn hộ gồm VAT (chưa phí bảo trì),
+   * trừ thẳng vào số tiền của đợt và vào Tổng giá trị HĐMB (VD Serena: KH tự thanh toán Đợt 23 → CK 2.5%)
+   */
+  paymentDiscount?: number;
   /** Đợt cuối: = Tổng giá trị HĐMB − các đợt trước (hấp thụ sai số làm tròn) */
   remainder?: boolean;
   /** Ai thanh toán đợt này. Mặc định: khách hàng */

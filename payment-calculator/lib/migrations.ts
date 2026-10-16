@@ -1,5 +1,9 @@
 import { imperiaSensaPark } from "../data/imperia-sensa-park/index.ts";
-import { specialMethod as serenaSpecialMethod, specialMethod2 as serenaSpecialMethod2 } from "../data/serena-riverside/index.ts";
+import {
+  SPECIAL_METHODS as serenaSpecialMethods,
+  specialMethod as serenaSpecialMethod,
+  specialMethod2 as serenaSpecialMethod2,
+} from "../data/serena-riverside/index.ts";
 import { NORTON_UNIT_PRICE, NORTON_UNIT_TYPES } from "../data/norton-park/index.ts";
 import { units as nortonUnits } from "../data/norton-park/units.ts";
 import type { Project } from "./types";
@@ -137,6 +141,16 @@ export const migrations: Migration[] = [
         ...p.methods.filter((m) => m.id !== serenaSpecialMethod.id && m.id !== serenaSpecialMethod2.id),
       ],
     }),
+  },
+  {
+    // Serena Riverside: Thông báo 11 & 12/2026/TB-ĐP — Đặc biệt 2 điều kiện vay 40%; thêm 2 PTTT
+    // "Tự thanh toán Đợt 23" (không vay, CK 2.5% giá trị HĐMB). 4 PTTT đặc biệt ở đầu danh sách
+    id: "2026-10-serena-dac-biet-tb-11-12",
+    projectId: "serena-riverside",
+    apply: (p) => {
+      const ids = new Set(serenaSpecialMethods.map((m) => m.id));
+      return { ...p, methods: [...serenaSpecialMethods, ...p.methods.filter((m) => !ids.has(m.id))] };
+    },
   },
 ];
 
