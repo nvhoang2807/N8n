@@ -707,8 +707,6 @@ function Breakdown({ project, quote }: { project: Project; quote: Quote }) {
     { label: "Giá căn hộ gồm VAT (chưa phí bảo trì)", value: quote.priceWithVat, strong: true },
     { label: `Phí bảo trì ${formatPercent(project.maintenanceRate)}`, value: quote.maintenance },
   );
-  if (quote.paymentDiscount > 0)
-    rows.push({ label: "Chiết khấu trừ vào đợt thanh toán (xem lịch thanh toán)", value: quote.paymentDiscount, minus: true });
   return (
     <>
       <div className="table-wrap">
@@ -741,7 +739,7 @@ function Breakdown({ project, quote }: { project: Project; quote: Quote }) {
         </div>
         <div>
           <span>Tổng chiết khấu</span>
-          <strong className="good">{formatShort(quote.totalDiscount + quote.paymentDiscount)}</strong>
+          <strong className="good">{formatShort(quote.totalDiscount)}</strong>
         </div>
         <div>
           <span>Khách tự thanh toán</span>

@@ -152,6 +152,20 @@ export const migrations: Migration[] = [
       return { ...p, methods: [...serenaSpecialMethods, ...p.methods.filter((m) => !ids.has(m.id))] };
     },
   },
+  {
+    // Serena Riverside: bỏ 2 PTTT "Tự thanh toán Đợt 23" — CK 2.5% khi tự trả Đợt 23 chỉ ghi chú, không đưa vào tính
+    id: "2026-10-serena-bo-tu-thanh-toan",
+    projectId: "serena-riverside",
+    apply: (p) => {
+      const byId = new Map(serenaSpecialMethods.map((m) => [m.id, m]));
+      return {
+        ...p,
+        methods: p.methods
+          .filter((m) => m.id !== "pttt-dac-biet-tu-tt" && m.id !== "pttt-dac-biet-2-tu-tt")
+          .map((m) => byId.get(m.id) ?? m),
+      };
+    },
+  },
 ];
 
 /** Dự án mới trong code (data/) tự được thêm lên kho đã khởi tạo, không cần bấm "+ Thêm" trong admin */
