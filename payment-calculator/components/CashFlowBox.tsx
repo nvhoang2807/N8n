@@ -212,8 +212,8 @@ export default function CashFlowBox({
           </details>
           <p className="muted small">
             Số dư = tiền hiện có + tiền để dành và tiền thuê lũy kế − mọi khoản đã đóng và đã trả ngân hàng. Tiền trả ngân hàng tính
-            theo giả định khoản vay ở phần trên. Bảng chạy tới đợt thanh toán cuối cùng; nếu CĐT hỗ trợ lãi hoặc ân
-            hạn gốc kéo dài hơn thì chạy tới hết thời gian đó. Chỉ mang tính tham khảo.
+            theo giả định khoản vay ở phần trên. Bảng chạy tới thời gian nhận nhà (chưa tính đợt nhận sổ vì chưa có thời
+            gian); nếu CĐT hỗ trợ lãi hoặc ân hạn gốc kéo dài hơn thì chạy tới hết thời gian đó. Chỉ mang tính tham khảo.
           </p>
         </>
       )}

@@ -235,9 +235,9 @@ test("quy mốc thời gian ra tháng cố định: HĐMB Quý 2/2027 → 04/202
       netArea: unit.netArea,
       timeline: { contract: tl.contractMonth, handover: tl.handoverMonth, start: "2026-10" },
     });
-  // PTTT Vay 1: ký quỹ/cọc hôm nay, HĐMB 04/2027, ngân hàng giải ngân sau 45 ngày (06/2027), bàn giao 10/2028, GCN +12 tháng
+  // PTTT Vay 1: ký quỹ/cọc hôm nay, HĐMB 04/2027, ngân hàng giải ngân sau 45 ngày (06/2027), bàn giao 10/2028; nhận sổ chưa có thời gian
   const vay = quote("pttt-vay-1").schedule;
-  assert.deepEqual(vay.map((r) => r.month), ["2026-10", "2026-10", "2027-04", "2027-05", "2027-06", "2028-10", "2029-10"]);
+  assert.deepEqual(vay.map((r) => r.month), ["2026-10", "2026-10", "2027-04", "2027-05", "2027-06", "2028-10", undefined]);
   // Đặc biệt 2: 21 đợt 1% đến 01/2029 → bàn giao (mặc định 10/2028) bị đẩy sau đợt cuối: 02/2029
   const db2 = quote("pttt-dac-biet-2").schedule;
   assert.equal(db2.find((r) => r.label === "Đợt 22")!.month, "2029-01");
@@ -273,7 +273,8 @@ test("dòng tiền từng tháng: số dư, tháng thiếu đầu tiên và ti�
   // Tổng chi cộng dồn = tổng đóng cho CĐT + tiền trả ngân hàng
   const last = none.rows.at(-1)!;
   const devTotal = none.rows.reduce((s, r) => s + r.developer, 0);
-  assert.equal(devTotal, quote.customerPays);
+  // Đợt nhận sổ (cuối) chưa có thời gian nên không nằm trong dòng tiền
+  assert.equal(devTotal, quote.customerPays - quote.schedule.at(-1)!.amount);
   assert.equal(last.cumSpend, devTotal + none.rows.reduce((s, r) => s + r.bank, 0));
   // Để dành đúng mức tối thiểu → không tháng nào thiếu; thấp hơn 1 chút thì thiếu
   const ok = cashFlow(quote, { start: "2026-10", cash, saving: none.neededSaving })!;
@@ -353,13 +354,14 @@ test("dòng tiền chạy tới đợt cuối cùng, hoặc hết hỗ trợ lã
     });
     return { q, flow: cashFlow(q, { start: "2026-10", cash: 0, saving: 0 })! };
   };
-  // PTTT Chuẩn (không vay): dừng ở đợt cuối (GCN)
+  // PTTT Chuẩn (không vay): dừng ở đợt nhận nhà (02/2029), không tính nhận sổ vì chưa có thời gian
   const chuan = run("pttt-chuan");
-  assert.equal(chuan.flow.rows.at(-1)!.month, chuan.q.schedule.at(-1)!.month);
-  // Đặc biệt 2: ngân hàng giải ngân 02/2029, ân hạn gốc 24 tháng → chạy tới 02/2031 (dài hơn đợt GCN 02/2030)
+  assert.equal(chuan.q.schedule.at(-1)!.month, undefined);
+  assert.equal(chuan.flow.rows.at(-1)!.month, "2029-02");
+  // Đặc biệt 2: ngân hàng giải ngân 02/2029, ân hạn gốc 24 tháng → chạy tới 02/2031 (dài hơn thời gian nhận nhà)
   const db2 = run("pttt-dac-biet-2");
-  assert.equal(db2.q.schedule.at(-1)!.month, "2030-02");
+  assert.equal(db2.q.schedule.at(-1)!.month, undefined);
   assert.equal(db2.flow.rows.at(-1)!.month, "2031-02");
   assert.equal(db2.flow.years.at(-1)!.year, 2031);
-  assert.ok(monthIndex(db2.flow.rows.at(-1)!.month)! > monthIndex(db2.q.schedule.at(-1)!.month)!);
+  assert.ok(monthIndex(db2.flow.rows.at(-1)!.month)! > monthIndex("2029-02")!);
 });
