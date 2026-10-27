@@ -127,23 +127,50 @@ export default function CashFlowBox({
                 {flow.minBalance < 0 ? `−${formatShort(-flow.minBalance)}` : formatShort(flow.minBalance)}
               </strong>
             </div>
-            <div>
-              <span>Tháng bắt đầu thiếu tiền</span>
-              <strong className={flow.firstShortMonth ? "warn-text" : "good"}>
-                {flow.firstShortMonth ? formatMonth(flow.firstShortMonth) : "Không thiếu"}
-              </strong>
-            </div>
           </div>
 
+          <h3 className="cashflow-years-title">Cần bao nhiêu tiền mỗi năm</h3>
+          <div className="table-wrap">
+            <table className="cashflow-years">
+              <thead>
+                <tr>
+                  <th>Năm</th>
+                  <th className="num">Cần chi trong năm</th>
+                  <th className="num">Trong đó đóng CĐT</th>
+                  <th className="num">Trả ngân hàng</th>
+                  <th className="num">Để dành + tiền thuê</th>
+                  <th className="num">Số dư cuối năm</th>
+                </tr>
+              </thead>
+              <tbody>
+                {flow.years.map((y) => (
+                  <tr key={y.year}>
+                    <td>
+                      <strong>{y.year}</strong>
+                    </td>
+                    <td className="num">
+                      <strong>{formatVnd(y.spend)}</strong>
+                    </td>
+                    <td className="num">{dash(y.developer)}</td>
+                    <td className="num">{dash(y.bank)}</td>
+                    <td className="num">{dash(y.income)}</td>
+                    <td className={`num ${y.endBalance < 0 ? "neg" : ""}`}>{signed(y.endBalance)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {flow.firstShortMonth ? (
             <p className="warn">
-              Bạn bắt đầu thiếu tiền từ {formatMonth(flow.firstShortMonth)}. Để đủ cần để dành ít nhất{" "}
-              {formatVnd(flow.neededSaving)} đ {growthRate > 0 ? `ở ${unit} đầu (tăng ${growth}% mỗi ${unit})` : "mỗi tháng"}
+              Số dư cuối năm màu đỏ là năm đang thiếu tiền (thiếu đầu tiên từ {formatMonth(flow.firstShortMonth)}). Để đủ
+              cần để dành ít nhất {formatVnd(flow.neededSaving)} đ{" "}
+              {growthRate > 0 ? `ở ${unit} đầu (tăng ${growth}% mỗi ${unit})` : "mỗi tháng"}
               {flow.shortNow > 0 ? `, và có thêm ${formatVnd(flow.shortNow)} đ tiền mặt ngay từ đầu` : ""}.
             </p>
           ) : (
             <p className="good">
-              Với {formatVnd(cashN)} đ hiện có và {formatVnd(savingN)} đ để dành{growthRate > 0 ? ` (tăng ${growth}% mỗi ${unit})` : " mỗi tháng"}
+              Với {formatVnd(cashN)} đ hiện có và {formatVnd(savingN)} đ để dành
+              {growthRate > 0 ? ` (tăng ${growth}% mỗi ${unit})` : " mỗi tháng"}
               {rentN > 0 ? `, thêm ${formatVnd(rentN)} đ tiền thuê sau nhận nhà` : ""}, bạn đủ tiền cho mọi khoản tới{" "}
               {formatMonth(flow.rows[flow.rows.length - 1].month)} (thấp nhất {formatVnd(flow.minBalance)} đ vào{" "}
               {formatMonth(flow.minMonth)}).

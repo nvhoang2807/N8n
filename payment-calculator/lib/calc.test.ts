@@ -321,3 +321,21 @@ test("lũy tiến tiền để dành và tiền thuê trong dòng tiền", async
   const ok = cashFlow(quote, { ...base, saving: needG, growth: 0.05 })!;
   assert.ok(ok.rows.slice(1).every((r) => r.balance >= 0));
 });
+
+test("dòng tiền tổng hợp theo năm: cần chi mỗi năm khớp bảng tháng", async () => {
+  const { serenaRiverside } = await import("../data/serena-riverside/index.ts");
+  const { computeQuote, unitListPrice, cashFlow } = await import("./calc.ts");
+  const unit = serenaRiverside.units[0];
+  const quote = computeQuote(serenaRiverside, serenaRiverside.methods.find((m) => m.id === "pttt-dac-biet")!, {
+    listPrice: unitListPrice(serenaRiverside, unit),
+    netArea: unit.netArea,
+    timeline: { contract: "2027-04", handover: "2028-10", start: "2026-10" },
+  });
+  const flow = cashFlow(quote, { start: "2026-10", cash: 400_000_000, saving: 10_000_000 })!;
+  assert.equal(flow.years[0].year, 2026);
+  assert.equal(flow.years[0].spend, quote.schedule[0].amount); // 2026: chỉ có ký quỹ 5%
+  assert.equal(flow.years.reduce((s, y) => s + y.spend, 0), flow.rows.at(-1)!.cumSpend);
+  assert.equal(flow.years.at(-1)!.endBalance, flow.rows.at(-1)!.balance);
+  const y2027 = flow.rows.filter((r) => r.month.startsWith("2027")).reduce((s, r) => s + r.spend, 0);
+  assert.equal(flow.years.find((y) => y.year === 2027)!.spend, y2027);
+});

@@ -426,8 +426,24 @@ export type CashFlowRow = {
   balance: number;
 };
 
+export type CashFlowYear = {
+  year: number;
+  /** Đóng cho CĐT trong năm */
+  developer: number;
+  /** Trả ngân hàng trong năm */
+  bank: number;
+  /** Tổng cần chi trong năm */
+  spend: number;
+  /** Tiền để dành + tiền thuê nhận được trong năm */
+  income: number;
+  /** Số dư cuối năm (âm = đang thiếu, lũy kế từ đầu) */
+  endBalance: number;
+};
+
 export type CashFlow = {
   rows: CashFlowRow[];
+  /** Tổng hợp theo năm: cần bao nhiêu tiền mỗi năm */
+  years: CashFlowYear[];
   /** Tổng khách tự đóng cho chủ đầu tư tới hết đợt bàn giao */
   toHandover: number;
   minBalance: number;
@@ -566,8 +582,23 @@ export function cashFlow(
     }
     neededSaving = Math.ceil(hi);
   }
+  const years: CashFlowYear[] = [];
+  for (const r of rows) {
+    const year = Number(r.month.slice(0, 4));
+    let y = years[years.length - 1];
+    if (!y || y.year !== year) {
+      y = { year, developer: 0, bank: 0, spend: 0, income: 0, endBalance: 0 };
+      years.push(y);
+    }
+    y.developer += r.developer;
+    y.bank += r.bank;
+    y.spend += r.spend;
+    y.income += r.saved + r.rent;
+    y.endBalance = r.balance;
+  }
   return {
     rows,
+    years,
     toHandover,
     minBalance: main.minBalance,
     minMonth: main.minMonth,

@@ -1369,3 +1369,14 @@ label.check {
   flex: 1;
   min-width: 0;
 }
+
+.cashflow-years-title {
+  margin: 18px 0 8px;
+  font-size: 16px;
+}
+
+.cashflow-years td.neg {
+  color: var(--warn);
+  font-weight: 600;
+  background: rgba(180, 35, 24, 0.1);
+}
