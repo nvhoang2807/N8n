@@ -1380,3 +1380,24 @@ label.check {
   font-weight: 600;
   background: rgba(180, 35, 24, 0.1);
 }
+
+/* Hai tab kết quả: Lịch thanh toán / Ước tính khoản vay. Khi in hoặc xuất hình vẫn hiện cả hai. */
+.result-tabs button {
+  padding: 12px 18px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.tab-hidden {
+  display: none;
+}
+
+@media print {
+  .tab-hidden {
+    display: block;
+  }
+}
+
+html.capturing .tab-hidden {
+  display: block;
+}

@@ -34,6 +34,8 @@ type State = {
   cash: string;
   saving: string;
   /** Lũy tiến % của tiền để dành (chuỗi %), tăng theo tháng hoặc năm; tiền thuê mỗi tháng (VND) */
+  /** Tab kết quả đang xem */
+  tab: "schedule" | "loan";
   savingGrowth: string;
   savingGrowthPer: "month" | "year";
   rent: string;
@@ -61,6 +63,7 @@ function initialState(project: Project): State {
     contractDate: "",
     cash: "",
     saving: "",
+    tab: "schedule",
     savingGrowth: "",
     savingGrowthPer: "month",
     rent: "",
@@ -99,6 +102,7 @@ function stateFromUrl(project: Project): State {
   s.contractDate = (q.get("hd") ?? "").slice(0, 7);
   s.cash = digits(q.get("tm") ?? "");
   s.saving = digits(q.get("td") ?? "");
+  if (q.get("tab") === "vay") s.tab = "loan";
   s.savingGrowth = q.get("tp") ?? "";
   if (q.get("tf") === "nam") s.savingGrowthPer = "year";
   s.rent = digits(q.get("tn") ?? "");
@@ -134,6 +138,7 @@ function stateToUrl(project: Project, s: State): string {
   if (s.contractDate) q.set("hd", s.contractDate);
   if (s.cash) q.set("tm", s.cash);
   if (s.saving) q.set("td", s.saving);
+  if (s.tab === "loan") q.set("tab", "vay");
   if (s.savingGrowth) q.set("tp", s.savingGrowth);
   if (s.savingGrowth && s.savingGrowthPer === "year") q.set("tf", "nam");
   if (s.rent) q.set("tn", s.rent);
@@ -563,6 +568,26 @@ export default function Calculator({
 
       {selected && (
         <>
+          <nav className="tabs result-tabs no-print" role="tablist">
+            <button
+              role="tab"
+              aria-selected={state.tab === "schedule"}
+              className={state.tab === "schedule" ? "active" : ""}
+              onClick={() => update({ tab: "schedule" })}
+            >
+              Lịch thanh toán
+            </button>
+            <button
+              role="tab"
+              aria-selected={state.tab === "loan"}
+              className={state.tab === "loan" ? "active" : ""}
+              onClick={() => update({ tab: "loan" })}
+            >
+              {selected.quote.loan ? "Ước tính khoản vay" : "Tiền để dành"}
+            </button>
+          </nav>
+
+          <div className={state.tab === "schedule" ? "tab-panel" : "tab-panel tab-hidden"}>
           <section className="card">
             <h2>
               <span className="step no-print">3</span>Chi tiết giá trị — {selected.method.name}
@@ -589,7 +614,9 @@ export default function Calculator({
             <h2>Lịch thanh toán</h2>
             <Schedule quote={selected.quote} />
           </section>
+          </div>
 
+          <div className={state.tab === "loan" ? "tab-panel" : "tab-panel tab-hidden"}>
           {selected.quote.loan && (
             <section className="card">
               <LoanBox
@@ -615,6 +642,7 @@ export default function Calculator({
               onChange={update}
             />
           </section>
+          </div>
         </>
       )}
 
