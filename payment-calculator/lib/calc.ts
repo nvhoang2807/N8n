@@ -514,7 +514,8 @@ export function cashFlow(
     for (const row of loan.schedule) repay.set(disbursedAt + row.month, row.payment);
     if (loan.supportMonths > 0) addEvent(disbursedAt + loan.supportMonths + 1, "Hết thời gian hỗ trợ lãi suất");
     addEvent(disbursedAt + loan.graceMonths + 1, "Bắt đầu trả gốc");
-    end = Math.max(end, disbursedAt + Math.max(loan.supportMonths, loan.graceMonths) + 12);
+    // Chạy tới đợt cuối cùng; nếu CĐT hỗ trợ lãi hoặc ân hạn gốc kéo dài hơn thì tới hết thời gian đó
+    end = Math.max(end, disbursedAt + Math.max(loan.supportMonths, loan.graceMonths));
   }
   end = Math.min(end, start + 120);
 

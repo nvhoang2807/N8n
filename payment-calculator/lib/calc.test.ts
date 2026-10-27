@@ -339,3 +339,27 @@ test("dòng tiền tổng hợp theo năm: cần chi mỗi năm khớp bảng th
   const y2027 = flow.rows.filter((r) => r.month.startsWith("2027")).reduce((s, r) => s + r.spend, 0);
   assert.equal(flow.years.find((y) => y.year === 2027)!.spend, y2027);
 });
+
+test("dòng tiền chạy tới đợt cuối cùng, hoặc hết hỗ trợ lãi / ân hạn gốc nếu dài hơn", async () => {
+  const { serenaRiverside } = await import("../data/serena-riverside/index.ts");
+  const { computeQuote, unitListPrice, cashFlow, monthIndex } = await import("./calc.ts");
+  const unit = serenaRiverside.units[0];
+  const tl = { contract: "2027-04", handover: "2028-10", start: "2026-10" };
+  const run = (id: string) => {
+    const q = computeQuote(serenaRiverside, serenaRiverside.methods.find((m) => m.id === id)!, {
+      listPrice: unitListPrice(serenaRiverside, unit),
+      netArea: unit.netArea,
+      timeline: tl,
+    });
+    return { q, flow: cashFlow(q, { start: "2026-10", cash: 0, saving: 0 })! };
+  };
+  // PTTT Chuẩn (không vay): dừng ở đợt cuối (GCN)
+  const chuan = run("pttt-chuan");
+  assert.equal(chuan.flow.rows.at(-1)!.month, chuan.q.schedule.at(-1)!.month);
+  // Đặc biệt 2: ngân hàng giải ngân 02/2029, ân hạn gốc 24 tháng → chạy tới 02/2031 (dài hơn đợt GCN 02/2030)
+  const db2 = run("pttt-dac-biet-2");
+  assert.equal(db2.q.schedule.at(-1)!.month, "2030-02");
+  assert.equal(db2.flow.rows.at(-1)!.month, "2031-02");
+  assert.equal(db2.flow.years.at(-1)!.year, 2031);
+  assert.ok(monthIndex(db2.flow.rows.at(-1)!.month)! > monthIndex(db2.q.schedule.at(-1)!.month)!);
+});
