@@ -285,3 +285,39 @@ test("dòng tiền từng tháng: số dư, tháng thiếu đầu tiên và ti�
   const noMonth = computeQuote(serenaRiverside, serenaRiverside.methods[0], { listPrice: 1e9, netArea: 50 });
   assert.equal(cashFlow(noMonth, { start: "2026-10", cash, saving: 0 }), undefined);
 });
+
+test("lũy tiến tiền để dành và tiền thuê trong dòng tiền", async () => {
+  const { serenaRiverside } = await import("../data/serena-riverside/index.ts");
+  const { computeQuote, unitListPrice, cashFlow, savingInMonth } = await import("./calc.ts");
+  // 10 triệu, lũy tiến 10%/tháng: 10 → 11 → 12,1 → 13,31 triệu; theo năm: giữ 10 triệu cả năm đầu
+  assert.equal(savingInMonth(10_000_000, 0, 0.1), 0);
+  assert.deepEqual([1, 2, 3, 4].map((n) => Math.round(savingInMonth(10_000_000, n, 0.1))), [10_000_000, 11_000_000, 12_100_000, 13_310_000]);
+  assert.equal(savingInMonth(10_000_000, 12, 0.1, "year"), 10_000_000);
+  assert.equal(Math.round(savingInMonth(10_000_000, 13, 0.1, "year")), 11_000_000);
+
+  const unit = serenaRiverside.units[0];
+  const quote = computeQuote(serenaRiverside, serenaRiverside.methods.find((m) => m.id === "pttt-dac-biet")!, {
+    listPrice: unitListPrice(serenaRiverside, unit),
+    netArea: unit.netArea,
+    timeline: { contract: "2027-04", handover: "2028-10", start: "2026-10" },
+  });
+  const base = { start: "2026-10", cash: 400_000_000, saving: 20_000_000 };
+  const flat = cashFlow(quote, base)!;
+  const grow = cashFlow(quote, { ...base, growth: 0.1 })!;
+  assert.deepEqual(grow.rows.slice(0, 4).map((r) => Math.round(r.saved)), [0, 20_000_000, 22_000_000, 24_200_000]);
+  assert.ok(grow.minBalance > flat.minBalance, "lũy tiến giúp số dư cao hơn");
+  // Tiền thuê chỉ từ tháng sau bàn giao (02/2029 → 03/2029)
+  const rented = cashFlow(quote, { ...base, rent: 10_000_000 })!;
+  const handoverRow = rented.rows.find((r) => r.developer > 800_000_000)!;
+  assert.equal(handoverRow.month, "2029-02");
+  assert.ok(rented.rows.filter((r) => r.month <= handoverRow.month).every((r) => r.rent === 0));
+  assert.equal(rented.rows.find((r) => r.month === "2029-03")!.rent, 10_000_000);
+  // Thuê chỉ cộng sau thời điểm thấp nhất (bàn giao), nên số dư cuối kỳ cao hơn
+  assert.ok(rented.rows.at(-1)!.balance > flat.rows.at(-1)!.balance);
+  // Mức để dành tháng đầu tối thiểu có lũy tiến thì thấp hơn không lũy tiến, và vừa đủ
+  const need0 = cashFlow(quote, { ...base, saving: 0 })!.neededSaving;
+  const needG = cashFlow(quote, { ...base, saving: 0, growth: 0.05 })!.neededSaving;
+  assert.ok(needG < need0);
+  const ok = cashFlow(quote, { ...base, saving: needG, growth: 0.05 })!;
+  assert.ok(ok.rows.slice(1).every((r) => r.balance >= 0));
+});

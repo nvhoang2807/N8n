@@ -33,6 +33,10 @@ type State = {
   /** Tiền hiện có và tiền để dành mỗi tháng (VND, chuỗi số) */
   cash: string;
   saving: string;
+  /** Lũy tiến % của tiền để dành (chuỗi %), tăng theo tháng hoặc năm; tiền thuê mỗi tháng (VND) */
+  savingGrowth: string;
+  savingGrowthPer: "month" | "year";
+  rent: string;
   rateAfter: string;
   termYears: string;
   loanType: LoanType;
@@ -57,6 +61,9 @@ function initialState(project: Project): State {
     contractDate: "",
     cash: "",
     saving: "",
+    savingGrowth: "",
+    savingGrowthPer: "month",
+    rent: "",
     rateAfter: "",
     termYears: "",
     loanType: "declining",
@@ -92,6 +99,9 @@ function stateFromUrl(project: Project): State {
   s.contractDate = (q.get("hd") ?? "").slice(0, 7);
   s.cash = digits(q.get("tm") ?? "");
   s.saving = digits(q.get("td") ?? "");
+  s.savingGrowth = q.get("tp") ?? "";
+  if (q.get("tf") === "nam") s.savingGrowthPer = "year";
+  s.rent = digits(q.get("tn") ?? "");
   s.rateAfter = q.get("ls") ?? "";
   s.termYears = q.get("tg") ?? "";
   if (q.get("kv") === "deu") s.loanType = "annuity";
@@ -124,6 +134,9 @@ function stateToUrl(project: Project, s: State): string {
   if (s.contractDate) q.set("hd", s.contractDate);
   if (s.cash) q.set("tm", s.cash);
   if (s.saving) q.set("td", s.saving);
+  if (s.savingGrowth) q.set("tp", s.savingGrowth);
+  if (s.savingGrowth && s.savingGrowthPer === "year") q.set("tf", "nam");
+  if (s.rent) q.set("tn", s.rent);
   if (s.rateAfter) q.set("ls", s.rateAfter);
   if (s.termYears) q.set("tg", s.termYears);
   if (s.loanType === "annuity") q.set("kv", "deu");
@@ -596,6 +609,9 @@ export default function Calculator({
               startMonth={nowMonth}
               cash={state.cash}
               saving={state.saving}
+              growth={state.savingGrowth}
+              growthPer={state.savingGrowthPer}
+              rent={state.rent}
               onChange={update}
             />
           </section>

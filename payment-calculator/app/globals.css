@@ -1359,3 +1359,13 @@ label.check {
   background: rgba(0, 0, 0, 0.035);
   font-weight: 600;
 }
+
+.inline-fields {
+  display: flex;
+  gap: 8px;
+}
+
+.inline-fields input {
+  flex: 1;
+  min-width: 0;
+}

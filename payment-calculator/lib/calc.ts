@@ -416,9 +416,13 @@ export type CashFlowRow = {
   /** Trả ngân hàng (gốc + lãi khách tự trả) */
   bank: number;
   spend: number;
+  /** Tiền để dành trong tháng (tăng dần nếu có lũy tiến) */
+  saved: number;
+  /** Tiền thuê nhận trong tháng (từ tháng sau bàn giao) */
+  rent: number;
   /** Tổng đã chi tới hết tháng */
   cumSpend: number;
-  /** Số dư = tiền mặt + tiền để dành lũy kế − tổng đã chi */
+  /** Số dư = tiền mặt + tiền để dành và tiền thuê lũy kế − tổng đã chi */
   balance: number;
 };
 
@@ -430,20 +434,37 @@ export type CashFlow = {
   minMonth: string;
   /** Tháng đầu tiên số dư âm */
   firstShortMonth?: string;
-  /** Tiền để dành mỗi tháng tối thiểu để không tháng nào thiếu (với tiền mặt hiện có) */
+  /** Tiền để dành tháng đầu tối thiểu (tăng dần theo lũy tiến nếu có) để không tháng nào thiếu */
   neededSaving: number;
   /** Tiền mặt còn thiếu ngay trong tháng bắt đầu — để dành thêm không bù được */
   shortNow: number;
 };
 
+/** Tiền để dành của tháng thứ n (n = 1 là tháng đầu): tăng dần theo tháng hoặc theo năm nếu có lũy tiến */
+export function savingInMonth(base: number, n: number, growth = 0, per: "month" | "year" = "month"): number {
+  if (n < 1) return 0;
+  const steps = per === "year" ? Math.floor((n - 1) / 12) : n - 1;
+  return base * Math.pow(1 + growth, steps);
+}
+
 /**
  * Dòng tiền từng tháng của khách: các đợt đóng cho CĐT, tiền trả ngân hàng sau giải ngân,
- * so với tiền mặt hiện có + tiền để dành mỗi tháng (bắt đầu từ tháng sau tháng bắt đầu).
+ * so với tiền mặt hiện có + tiền để dành mỗi tháng (bắt đầu từ tháng sau tháng bắt đầu, có thể tăng dần theo
+ * lũy tiến %) + tiền thuê nhận được từ tháng sau bàn giao.
  * undefined nếu chưa biết tháng của các đợt (chưa có tháng ký HĐMB).
  */
 export function cashFlow(
   quote: Quote,
-  opts: { start: string; cash: number; saving: number },
+  opts: {
+    start: string;
+    cash: number;
+    saving: number;
+    /** Lũy tiến: tỷ lệ tăng của tiền để dành (0.1 = 10%), tăng mỗi tháng hoặc mỗi năm */
+    growth?: number;
+    growthPer?: "month" | "year";
+    /** Tiền thuê nhận mỗi tháng từ tháng sau bàn giao */
+    rent?: number;
+  },
 ): CashFlow | undefined {
   const start = monthIndex(opts.start);
   if (start === undefined || quote.schedule.some((r) => r.month === undefined)) return undefined;
@@ -481,37 +502,77 @@ export function cashFlow(
   }
   end = Math.min(end, start + 120);
 
-  const rows: CashFlowRow[] = [];
-  let cum = 0;
-  let toHandover = 0;
-  let minBalance = Infinity;
-  let minMonth = monthKey(start);
-  let firstShortMonth: string | undefined;
-  let neededSaving = 0;
-  let shortNow = 0;
-  for (let t = start; t <= end; t++) {
-    const dev = developer.get(t) ?? 0;
-    const bank = repay.get(t) ?? 0;
-    if (t <= handoverAt) toHandover += dev;
-    cum += dev + bank;
-    const n = t - start;
-    const balance = opts.cash + opts.saving * n - cum;
-    if (n === 0) shortNow = Math.max(0, cum - opts.cash);
-    else neededSaving = Math.max(neededSaving, (cum - opts.cash) / n);
-    if (balance < minBalance) {
-      minBalance = balance;
-      minMonth = monthKey(t);
+  const rent = opts.rent ?? 0;
+  if (rent > 0) addEvent(handoverAt + 1, "Bắt đầu nhận tiền thuê");
+  const rentIn = (t: number) => (rent > 0 && t > handoverAt! ? rent : 0);
+
+  // Chạy toàn bộ dòng tiền với một mức để dành tháng đầu
+  const run = (
+    base: number,
+  ): { rows: CashFlowRow[]; minBalance: number; minAfter: number; minMonth: string; firstShort?: string } => {
+    const rows: CashFlowRow[] = [];
+    let spendSum = 0;
+    let income = 0;
+    let minBalance = Infinity;
+    // Thấp nhất từ tháng sau tháng bắt đầu: tháng đầu không bù được bằng tiền để dành
+    let minAfter = Infinity;
+    let minMonth = monthKey(start);
+    let firstShort: string | undefined;
+    for (let t = start; t <= end; t++) {
+      const dev = developer.get(t) ?? 0;
+      const bank = repay.get(t) ?? 0;
+      const saved = savingInMonth(base, t - start, opts.growth, opts.growthPer);
+      const rentNow = rentIn(t);
+      spendSum += dev + bank;
+      income += saved + rentNow;
+      const balance = opts.cash + income - spendSum;
+      if (balance < minBalance) {
+        minBalance = balance;
+        minMonth = monthKey(t);
+      }
+      if (t > start) minAfter = Math.min(minAfter, balance);
+      if (balance < 0 && firstShort === undefined) firstShort = monthKey(t);
+      rows.push({
+        month: monthKey(t),
+        events: events.get(t) ?? [],
+        developer: dev,
+        bank,
+        spend: dev + bank,
+        saved,
+        rent: rentNow,
+        cumSpend: spendSum,
+        balance,
+      });
     }
-    if (balance < 0 && firstShortMonth === undefined) firstShortMonth = monthKey(t);
-    rows.push({
-      month: monthKey(t),
-      events: events.get(t) ?? [],
-      developer: dev,
-      bank,
-      spend: dev + bank,
-      cumSpend: cum,
-      balance,
-    });
+    return { rows, minBalance, minAfter, minMonth, firstShort };
+  };
+
+  const main = run(opts.saving);
+  const { rows } = main;
+  let toHandover = 0;
+  for (const r of rows) if (monthIndex(r.month)! <= handoverAt) toHandover += r.developer;
+  const shortNow = Math.max(0, rows[0].cumSpend - opts.cash);
+
+  // Tiền để dành tháng đầu tối thiểu: tìm nhị phân (số dư thấp nhất tăng dần theo mức để dành)
+  let neededSaving = 0;
+  if (run(0).minAfter < 0) {
+    let lo = 0;
+    let hi = Math.max(rows[rows.length - 1].cumSpend, 1);
+    while (run(hi).minAfter < 0 && hi < 1e13) hi *= 2;
+    for (let k = 0; k < 60 && hi - lo > 1; k++) {
+      const mid = (lo + hi) / 2;
+      if (run(mid).minAfter < 0) lo = mid;
+      else hi = mid;
+    }
+    neededSaving = Math.ceil(hi);
   }
-  return { rows, toHandover, minBalance, minMonth, firstShortMonth, neededSaving: Math.ceil(neededSaving), shortNow };
+  return {
+    rows,
+    toHandover,
+    minBalance: main.minBalance,
+    minMonth: main.minMonth,
+    firstShortMonth: main.firstShort,
+    neededSaving,
+    shortNow,
+  };
 }
