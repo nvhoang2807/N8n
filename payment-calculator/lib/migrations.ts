@@ -13,6 +13,30 @@ import type { Project } from "./types";
  * trong admin. Mỗi bước chỉ sửa đúng phần cần sửa (giữ nguyên các chỉnh sửa khác trong admin),
  * chạy một lần cho mỗi dự án và được ghi lại trong project.migrations.
  */
+/** "Quý 2/2027" / "quý IV/2028" → tháng đầu của quý: "04/2027" / "10/2028" */
+export function quarterToMonth(text: string): string {
+  const roman: Record<string, number> = { I: 1, II: 2, III: 3, IV: 4 };
+  return text.replace(/Quý\s*(IV|III|II|I|[1-4])\s*\/\s*(\d{4})/gi, (_, q: string, y: string) => {
+    const n = roman[q.toUpperCase()] ?? Number(q);
+    return `${String((n - 1) * 3 + 1).padStart(2, "0")}/${y}`;
+  });
+}
+
+/** Quy các mốc "Quý X/YYYY" trong lịch thanh toán ra tháng cố định */
+function quartersToMonths(p: Project): Project {
+  return {
+    ...p,
+    methods: p.methods.map((m) => ({
+      ...m,
+      milestones: m.milestones.map((x) => ({
+        ...x,
+        due: quarterToMonth(x.due),
+        ...(x.note !== undefined ? { note: quarterToMonth(x.note) } : {}),
+      })),
+    })),
+  };
+}
+
 export type Migration = { id: string; projectId: string; apply: (p: Project) => Project };
 
 export const migrations: Migration[] = [
@@ -165,6 +189,24 @@ export const migrations: Migration[] = [
           .map((m) => byId.get(m.id) ?? m),
       };
     },
+  },
+  {
+    // Serena Riverside: mốc thời gian cố định (HĐMB 04/2027, bàn giao 10/2028) thay cho "Quý 2/2027", "Quý 4/2028"
+    id: "2026-10-serena-moc-thang",
+    projectId: "serena-riverside",
+    apply: (p) => ({ ...quartersToMonths(p), timeline: p.timeline ?? { contractMonth: "2027-04", handoverMonth: "2028-10" } }),
+  },
+  {
+    // Imperia Sensa Park: HĐMB 01/2027, bàn giao 10/2028
+    id: "2026-10-isp-moc-thang",
+    projectId: "imperia-sensa-park",
+    apply: (p) => ({ ...quartersToMonths(p), timeline: p.timeline ?? { contractMonth: "2027-01", handoverMonth: "2028-10" } }),
+  },
+  {
+    // Norton Park: HĐMB 12/2026, bàn giao 09/2029
+    id: "2026-10-norton-moc-thang",
+    projectId: "norton-park",
+    apply: (p) => ({ ...p, timeline: p.timeline ?? { contractMonth: "2026-12", handoverMonth: "2029-09" } }),
   },
 ];
 

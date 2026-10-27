@@ -148,3 +148,33 @@ test("so sánh cấu hình bỏ qua danh sách căn nhập trên admin", async (
   assert.ok(sameConfig({ ...palm, units: [...palm.units, extra] }, palm));
   assert.ok(!sameConfig({ ...palm, vatRate: 0.08 }, palm));
 });
+
+test("tự sửa dữ liệu đã lưu: quy 'Quý' ra tháng cố định + thêm mốc thời gian (Serena, Imperia), giống bản trong code", async () => {
+  const { applyMigrations, quarterToMonth } = await import("./migrations.ts");
+  const { sameConfig } = await import("./types.ts");
+  assert.equal(quarterToMonth("Ký HĐMB (Dự kiến Quý 2/2027)"), "Ký HĐMB (Dự kiến 04/2027)");
+  assert.equal(quarterToMonth("Bàn giao (dự kiến quý IV/2028)"), "Bàn giao (dự kiến 10/2028)");
+  assert.equal(quarterToMonth("Dự kiến Quý I/2027"), "Dự kiến 01/2027");
+  assert.equal(quarterToMonth("Dự kiến 09/2029"), "Dự kiến 09/2029");
+  for (const id of ["serena-riverside", "imperia-sensa-park"]) {
+    const current = defaultProjects.find((p) => p.id === id)!;
+    // Bản cũ đã lưu: chữ "Quý", chưa có mốc thời gian
+    const toQuarter = (t: string) =>
+      t.replace("04/2027", "Quý 2/2027").replace("01/2027", "Quý I/2027").replace("10/2028", "Quý 4/2028");
+    const old = {
+      ...current,
+      timeline: undefined,
+      migrations: [],
+      methods: current.methods.map((m) => ({
+        ...m,
+        milestones: m.milestones.map((x) => ({ ...x, due: toQuarter(x.due), ...(x.note ? { note: toQuarter(x.note) } : {}) })),
+      })),
+    };
+    const { project } = applyMigrations(old);
+    assert.ok(sameConfig(project, current), `${id}: dữ liệu đã sửa phải trùng cấu hình trong code`);
+  }
+  // Norton Park đã dùng tháng cố định từ đầu, chỉ thêm mốc thời gian
+  const norton = defaultProjects.find((p) => p.id === "norton-park")!;
+  const { project: n } = applyMigrations({ ...norton, timeline: undefined, migrations: [] });
+  assert.deepEqual(n.timeline, norton.timeline);
+});

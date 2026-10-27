@@ -116,6 +116,17 @@ export type Unit = {
   price?: number;
 };
 
+/**
+ * Mốc thời gian dự kiến của dự án, quy ra tháng cố định (YYYY-MM).
+ * VD HĐMB "Quý 2/2027" → 2027-04 (tháng đầu của quý). Người dùng đổi được tháng ký HĐMB trên bảng tính.
+ */
+export type Timeline = {
+  contractMonth: string;
+  handoverMonth: string;
+  /** Mặc định = tháng bàn giao + 12 */
+  certificateMonth?: string;
+};
+
 export type Project = {
   id: string;
   name: string;
@@ -134,6 +145,8 @@ export type Project = {
    * Cơ sở tính phí bảo trì. "net" (mặc định): giá sau chiết khấu chưa VAT;
    * "list": giá công bố trước chiết khấu.
    */
+  /** Mốc thời gian dự kiến (tháng ký HĐMB, bàn giao, GCN) để quy các đợt ra tháng cố định */
+  timeline?: Timeline;
   maintenanceBase?: "net" | "list";
   /** Diện tích nhân với đơn giá để ra giá công bố. Mặc định "gross" (tim tường) */
   priceArea?: "gross" | "net";

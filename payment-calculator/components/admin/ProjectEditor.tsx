@@ -176,6 +176,11 @@ function GeneralTab({
   update: (p: Partial<Project>) => void;
   isNew: boolean;
 }) {
+  // Cả hai tháng để trống thì bỏ mốc thời gian
+  const updateTimeline = (patch: Partial<NonNullable<Project["timeline"]>>) => {
+    const next = { contractMonth: "", handoverMonth: "", ...project.timeline, ...patch };
+    update({ timeline: next.contractMonth || next.handoverMonth ? next : undefined });
+  };
   const [imageBusy, setImageBusy] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
 
@@ -365,6 +370,23 @@ function GeneralTab({
               <option value="net">Giá sau chiết khấu</option>
               <option value="list">Giá công bố (trước chiết khấu)</option>
             </select>
+          </label>
+          <label>
+            Tháng ký HĐMB dự kiến
+            <input
+              type="month"
+              value={project.timeline?.contractMonth ?? ""}
+              onChange={(e) => updateTimeline({ contractMonth: e.target.value })}
+            />
+          </label>
+          <label>
+            Tháng bàn giao dự kiến
+            <input
+              type="month"
+              value={project.timeline?.handoverMonth ?? ""}
+              onChange={(e) => updateTimeline({ handoverMonth: e.target.value })}
+            />
+            <small className="muted">Quy "Quý 2/2027" thành tháng đầu quý (04/2027). Bảng tính hiện các đợt theo tháng.</small>
           </label>
           <label className="check">
             <input

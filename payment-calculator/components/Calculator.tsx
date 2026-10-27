@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import {
   applyPriceOptions,
   computeQuote,
-  formatDate,
+  formatMonth,
+  monthIndex,
+  monthKey,
   formatPercent,
   formatShort,
   formatVnd,
@@ -14,6 +16,7 @@ import {
 } from "@/lib/calc.ts";
 import { projectColorVars } from "@/lib/color.ts";
 import { fromPercentText, parseNumber, toPercentText } from "@/lib/numbers.ts";
+import CashFlowBox from "./CashFlowBox";
 import UnitPicker, { normalizeCode } from "./UnitPicker";
 import type { PaymentMethod, Project, Unit } from "@/lib/types";
 
@@ -25,7 +28,11 @@ type State = {
   optional: Record<string, number>;
   /** Lựa chọn tùy chọn đơn giá (vị trí trong choices), theo id */
   priceOpts: Record<string, number>;
+  /** Tháng ký HĐMB (YYYY-MM); rỗng = theo mốc mặc định của dự án */
   contractDate: string;
+  /** Tiền hiện có và tiền để dành mỗi tháng (VND, chuỗi số) */
+  cash: string;
+  saving: string;
   rateAfter: string;
   termYears: string;
   loanType: LoanType;
@@ -48,6 +55,8 @@ function initialState(project: Project): State {
     optional: Object.fromEntries(project.optionalDiscounts.map((d) => [d.id, d.default])),
     priceOpts: Object.fromEntries((project.priceOptions ?? []).map((o) => [o.id, o.default])),
     contractDate: "",
+    cash: "",
+    saving: "",
     rateAfter: "",
     termYears: "",
     loanType: "declining",
@@ -80,7 +89,9 @@ function stateFromUrl(project: Project): State {
   const method = q.get("m");
   if (method && project.methods.some((m) => m.id === method)) s.methodId = method;
   s.unitPrice = q.get("dg") ?? "";
-  s.contractDate = q.get("hd") ?? "";
+  s.contractDate = (q.get("hd") ?? "").slice(0, 7);
+  s.cash = digits(q.get("tm") ?? "");
+  s.saving = digits(q.get("td") ?? "");
   s.rateAfter = q.get("ls") ?? "";
   s.termYears = q.get("tg") ?? "";
   if (q.get("kv") === "deu") s.loanType = "annuity";
@@ -111,6 +122,8 @@ function stateToUrl(project: Project, s: State): string {
     if (v !== d.default) q.set(`ck_${d.id}`, String(v));
   }
   if (s.contractDate) q.set("hd", s.contractDate);
+  if (s.cash) q.set("tm", s.cash);
+  if (s.saving) q.set("td", s.saving);
   if (s.rateAfter) q.set("ls", s.rateAfter);
   if (s.termYears) q.set("tg", s.termYears);
   if (s.loanType === "annuity") q.set("kv", "deu");
@@ -225,9 +238,23 @@ export default function Calculator({
     [project, typeFilter],
   );
 
+  // Tháng hiện tại: mốc bắt đầu của dòng tiền (chỉ dùng sau khi trang đã chạy trên trình duyệt)
+  const nowMonth = useMemo(() => {
+    const d = new Date();
+    return monthKey(d.getFullYear() * 12 + d.getMonth());
+  }, []);
+  // Tháng ký HĐMB: người dùng chọn, không thì theo mốc mặc định của dự án (VD "Quý 2/2027" → 04/2027)
+  const contractMonth =
+    state && monthIndex(state.contractDate) !== undefined ? state.contractDate : project.timeline?.contractMonth;
+
   const quotes = useMemo(() => {
     if (!state || !unit || listPrice <= 0) return [];
-    const contractDate = state.contractDate ? new Date(`${state.contractDate}T00:00:00`) : undefined;
+    const timeline = {
+      contract: contractMonth,
+      handover: project.timeline?.handoverMonth,
+      certificate: project.timeline?.certificateMonth,
+      start: nowMonth,
+    };
     return project.methods.map((m) => ({
       method: m,
       quote: computeQuote(project, m, {
@@ -237,13 +264,13 @@ export default function Calculator({
         methodDiscount: project.adjustableMethodDiscount
           ? fromPercentText(state.methodDiscount[m.id] ?? "")
           : undefined,
-        contractDate,
+        timeline,
         rateAfter: state.rateAfter ? Number(state.rateAfter) / 100 : undefined,
         termYears: state.termYears ? Number(state.termYears) : undefined,
         loanType: state.loanType,
       }),
     }));
-  }, [state, project, unit, listPrice]);
+  }, [state, project, unit, listPrice, contractMonth, nowMonth]);
 
   if (!state) return <main className="page" />;
 
@@ -474,12 +501,18 @@ export default function Calculator({
             <input value={state.customer} onChange={(e) => update({ customer: e.target.value })} />
           </label>
           <label>
-            Ngày ký HĐMB dự kiến (tùy chọn)
+            Tháng ký HĐMB dự kiến
             <input
-              type="date"
-              value={state.contractDate}
+              type="month"
+              value={contractMonth ?? ""}
               onChange={(e) => update({ contractDate: e.target.value })}
             />
+            {project.timeline?.contractMonth && !state.contractDate && (
+              <small className="muted">
+                Theo dự kiến của CĐT: {formatMonth(project.timeline.contractMonth)}, bàn giao{" "}
+                {project.timeline.handoverMonth ? formatMonth(project.timeline.handoverMonth) : "—"}
+              </small>
+            )}
           </label>
         </div>
         {customMode ? (
@@ -541,7 +574,7 @@ export default function Calculator({
 
           <section className="card">
             <h2>Lịch thanh toán</h2>
-            <Schedule quote={selected.quote} showDates={!!state.contractDate} />
+            <Schedule quote={selected.quote} />
           </section>
 
           {selected.quote.loan && (
@@ -556,6 +589,16 @@ export default function Calculator({
               />
             </section>
           )}
+
+          <section className="card no-print">
+            <CashFlowBox
+              quote={selected.quote}
+              startMonth={nowMonth}
+              cash={state.cash}
+              saving={state.saving}
+              onChange={update}
+            />
+          </section>
         </>
       )}
 
@@ -756,7 +799,8 @@ function Breakdown({ project, quote }: { project: Project; quote: Quote }) {
   );
 }
 
-function Schedule({ quote, showDates }: { quote: Quote; showDates: boolean }) {
+function Schedule({ quote }: { quote: Quote }) {
+  const showDates = quote.schedule.some((r) => r.month);
   return (
     <div className="table-wrap">
       <table className="schedule stack">
@@ -781,7 +825,7 @@ function Schedule({ quote, showDates }: { quote: Quote; showDates: boolean }) {
                 {r.note && <div className="muted small">{r.note}</div>}
                 {r.payer === "bank" && <span className="tag">Ngân hàng giải ngân</span>}
               </td>
-              {showDates && <td data-label="Dự kiến">{r.dueDate ? formatDate(r.dueDate) : "—"}</td>}
+              {showDates && <td data-label="Dự kiến">{r.month ? formatMonth(r.month) : "—"}</td>}
               <td className="num" data-label="Tỷ lệ">{r.percent !== undefined ? formatPercent(r.percent) : "—"}</td>
               <td className="num amount" data-label="Giá trị (đ)">{formatVnd(r.amount)}</td>
               <td className="num muted" data-label="Lũy kế">{r.cumulativePercent !== undefined ? formatPercent(r.cumulativePercent) : "—"}</td>

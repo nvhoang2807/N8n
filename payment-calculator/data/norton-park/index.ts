@@ -123,6 +123,7 @@ export const nortonPark: Project = {
   description: "Phân khu B · 63 layout căn hộ, Duplex & Podium Shop",
   unitTypes: NORTON_UNIT_TYPES,
   defaultUnitPrice: NORTON_UNIT_PRICE,
+  timeline: { contractMonth: "2026-12", handoverMonth: "2029-09" },
   vatRate: 0.1,
   maintenanceRate: 0.02,
   customUnits: true,

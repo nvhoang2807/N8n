@@ -222,3 +222,66 @@ test("Serena PTTT Đặc biệt 1 & 2: tổng 100%, ngân hàng giải ngân 30%
     assert.ok(Math.abs(bank / base - bankShare) < 0.001, `${id} NH ${bank / base}`);
   }
 });
+
+test("quy mốc thời gian ra tháng cố định: HĐMB Quý 2/2027 → 04/2027, bàn giao Quý 4/2028 → 10/2028", async () => {
+  const { serenaRiverside } = await import("../data/serena-riverside/index.ts");
+  const { computeQuote, unitListPrice } = await import("./calc.ts");
+  const unit = serenaRiverside.units[0];
+  const tl = serenaRiverside.timeline!;
+  assert.deepEqual(tl, { contractMonth: "2027-04", handoverMonth: "2028-10" });
+  const quote = (id: string) =>
+    computeQuote(serenaRiverside, serenaRiverside.methods.find((m) => m.id === id)!, {
+      listPrice: unitListPrice(serenaRiverside, unit),
+      netArea: unit.netArea,
+      timeline: { contract: tl.contractMonth, handover: tl.handoverMonth, start: "2026-10" },
+    });
+  // PTTT Vay 1: ký quỹ/cọc hôm nay, HĐMB 04/2027, ngân hàng giải ngân sau 45 ngày (06/2027), bàn giao 10/2028, GCN +12 tháng
+  const vay = quote("pttt-vay-1").schedule;
+  assert.deepEqual(vay.map((r) => r.month), ["2026-10", "2026-10", "2027-04", "2027-05", "2027-06", "2028-10", "2029-10"]);
+  // Đặc biệt 2: 21 đợt 1% đến 01/2029 → bàn giao (mặc định 10/2028) bị đẩy sau đợt cuối: 02/2029
+  const db2 = quote("pttt-dac-biet-2").schedule;
+  assert.equal(db2.find((r) => r.label === "Đợt 22")!.month, "2029-01");
+  assert.equal(db2.find((r) => r.payer === "bank")!.month, "2029-02");
+  // Chưa biết tháng HĐMB → không có tháng
+  const none = computeQuote(serenaRiverside, serenaRiverside.methods[0], {
+    listPrice: unitListPrice(serenaRiverside, unit),
+    netArea: unit.netArea,
+  });
+  assert.ok(none.schedule.every((r) => r.month === undefined));
+  // Mọi dự án có mốc: không còn chữ "Quý" trong lịch thanh toán
+  for (const p of projects) {
+    if (!p.timeline) continue;
+    for (const m of p.methods) for (const r of m.milestones) assert.ok(!/quý/i.test(r.due + (r.note ?? "")), `${p.id}: ${r.due}`);
+  }
+});
+
+test("dòng tiền từng tháng: số dư, tháng thiếu đầu tiên và tiền để dành tối thiểu", async () => {
+  const { serenaRiverside } = await import("../data/serena-riverside/index.ts");
+  const { computeQuote, unitListPrice, cashFlow } = await import("./calc.ts");
+  const unit = serenaRiverside.units[0];
+  const quote = computeQuote(serenaRiverside, serenaRiverside.methods.find((m) => m.id === "pttt-dac-biet")!, {
+    listPrice: unitListPrice(serenaRiverside, unit),
+    netArea: unit.netArea,
+    timeline: { contract: "2027-04", handover: "2028-10", start: "2026-10" },
+  });
+  const cash = 400_000_000;
+  const none = cashFlow(quote, { start: "2026-10", cash, saving: 0 })!;
+  assert.equal(none.rows[0].month, "2026-10");
+  assert.equal(none.rows[0].developer, quote.schedule[0].amount); // ký quỹ 5% đóng ngay
+  assert.ok(none.firstShortMonth, "không để dành thì có tháng thiếu");
+  assert.ok(none.neededSaving > 0);
+  // Tổng chi cộng dồn = tổng đóng cho CĐT + tiền trả ngân hàng
+  const last = none.rows.at(-1)!;
+  const devTotal = none.rows.reduce((s, r) => s + r.developer, 0);
+  assert.equal(devTotal, quote.customerPays);
+  assert.equal(last.cumSpend, devTotal + none.rows.reduce((s, r) => s + r.bank, 0));
+  // Để dành đúng mức tối thiểu → không tháng nào thiếu; thấp hơn 1 chút thì thiếu
+  const ok = cashFlow(quote, { start: "2026-10", cash, saving: none.neededSaving })!;
+  assert.equal(ok.firstShortMonth, undefined);
+  assert.ok(ok.minBalance >= 0);
+  const short = cashFlow(quote, { start: "2026-10", cash, saving: none.neededSaving - 1_000_000 })!;
+  assert.ok(short.firstShortMonth);
+  // Chưa biết tháng ký HĐMB → không tính được
+  const noMonth = computeQuote(serenaRiverside, serenaRiverside.methods[0], { listPrice: 1e9, netArea: 50 });
+  assert.equal(cashFlow(noMonth, { start: "2026-10", cash, saving: 0 }), undefined);
+});

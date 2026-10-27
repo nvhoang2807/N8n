@@ -1,4 +1,4 @@
-import type { Discount, Loan, PaymentMethod, Project } from "./types";
+import type { Discount, Loan, Milestone, PaymentMethod, Project } from "./types";
 
 export type DiscountLine = { label: string; percent: number; amount: number };
 
@@ -19,7 +19,8 @@ export type ScheduleRow = {
   cumulativePercent?: number;
   payer: "customer" | "bank";
   includesMaintenance: boolean;
-  dueDate?: Date;
+  /** Tháng dự kiến thanh toán (YYYY-MM) khi đã biết tháng ký HĐMB */
+  month?: string;
 };
 
 /** Cách trả nợ: "declining" = dư nợ giảm dần (gốc đều), "annuity" = trả góp đều (gốc + lãi bằng nhau) */
@@ -94,8 +95,8 @@ export type QuoteInput = {
   netArea: number;
   /** Mức chiết khấu tùy chọn đã chọn, theo id */
   optionalDiscounts?: Record<string, number>;
-  /** Ngày ký HĐMB dự kiến — để ước tính ngày các đợt */
-  contractDate?: Date;
+  /** Mốc thời gian (tháng cố định) để ước tính tháng thanh toán của từng đợt */
+  timeline?: TimelineInput;
   /** Chiết khấu PTTT áp dụng cho khách (thay mức của chiết khấu đầu tiên trong PTTT) */
   methodDiscount?: number;
   /** Ghi đè giả định khoản vay */
@@ -106,25 +107,61 @@ export type QuoteInput = {
 
 const round = (n: number) => Math.round(n);
 
-export function addMonths(date: Date, months: number): Date {
-  const d = new Date(date.getTime());
-  const day = d.getDate();
-  d.setDate(1);
-  d.setMonth(d.getMonth() + months);
-  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-  d.setDate(Math.min(day, lastDay));
-  return d;
+/** Mốc thời gian đầu vào (YYYY-MM): tháng ký HĐMB, bàn giao, GCN và tháng bắt đầu (hôm nay) */
+export type TimelineInput = { contract?: string; handover?: string; certificate?: string; start?: string };
+
+/** "2027-04" (hoặc "2027-04-15") → số tháng liên tục, để cộng trừ tháng */
+export function monthIndex(key?: string): number | undefined {
+  const m = /^(\d{4})-(\d{2})/.exec(key ?? "");
+  if (!m) return undefined;
+  const mo = Number(m[2]);
+  return mo >= 1 && mo <= 12 ? Number(m[1]) * 12 + mo - 1 : undefined;
 }
 
-function dueDate(contractDate?: Date, months?: number, days?: number): Date | undefined {
-  if (!contractDate) return undefined;
-  if (months !== undefined) return addMonths(contractDate, months);
-  if (days !== undefined) {
-    const d = new Date(contractDate.getTime());
-    d.setDate(d.getDate() + days);
-    return d;
-  }
-  return undefined;
+export const monthKey = (i: number): string => `${Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, "0")}`;
+
+/** 2027-04 → 04/2027 */
+export function formatMonth(key: string): string {
+  const m = /^(\d{4})-(\d{2})/.exec(key);
+  return m ? `${m[2]}/${m[1]}` : key;
+}
+
+const isCertificate = (m: Milestone) => /giấy chứng nhận|\bgcn\b|sổ hồng|pink book/i.test(m.due);
+const isHandover = (m: Milestone) => !!m.includeMaintenance || /bàn giao|handover/i.test(m.due);
+
+/**
+ * Quy từng đợt ra tháng cố định (số tháng liên tục):
+ *  - có monthsAfterContract / daysAfterContract → tháng ký HĐMB + số tháng (30 ngày = 1 tháng)
+ *  - khoản ứng trước (cọc, VBTT, ký quỹ) → tháng bắt đầu (hôm nay), không muộn hơn tháng ký HĐMB
+ *  - đợt bàn giao → tháng bàn giao của dự án, nhưng luôn sau các đợt đóng theo tháng đứng trước nó
+ *  - đợt nhận GCN → tháng GCN của dự án, mặc định bàn giao + 12 tháng
+ * Trả về undefined cho mọi đợt nếu chưa biết tháng ký HĐMB.
+ */
+export function resolveMonths(milestones: Milestone[], tl: TimelineInput): (number | undefined)[] {
+  const contract = monthIndex(tl.contract);
+  if (contract === undefined) return milestones.map(() => undefined);
+  const start = Math.min(monthIndex(tl.start) ?? contract, contract);
+  const handoverBase = monthIndex(tl.handover);
+  const certBase = monthIndex(tl.certificate);
+  let prevMax = start;
+  let handover: number | undefined;
+  return milestones.map((m) => {
+    let v: number;
+    if (m.monthsAfterContract !== undefined) v = contract + m.monthsAfterContract;
+    else if (m.daysAfterContract !== undefined) v = contract + Math.round(m.daysAfterContract / 30);
+    else if (m.advance) v = start;
+    else if (isCertificate(m)) {
+      v = certBase ?? (handover ?? prevMax) + 12;
+      if (v <= prevMax) v = prevMax + 1;
+    } else if (isHandover(m)) {
+      if (handover === undefined) {
+        handover = handoverBase === undefined ? prevMax : handoverBase > prevMax ? handoverBase : prevMax + 1;
+      }
+      v = handover;
+    } else v = prevMax;
+    prevMax = Math.max(prevMax, v);
+    return v;
+  });
 }
 
 /** Diện tích dùng để tính giá công bố của dự án */
@@ -202,6 +239,7 @@ export function computeQuote(
   let cumulative = 0;
   let percentSum = 0;
   let pendingAdvancePercent = 0;
+  const months = resolveMonths(method.milestones, input.timeline ?? {});
   const schedule: ScheduleRow[] = method.milestones.map((m, i) => {
     let amount: number;
     if (m.remainder) {
@@ -237,7 +275,7 @@ export function computeQuote(
       cumulativePercent,
       payer: m.payer ?? "customer",
       includesMaintenance: !!m.includeMaintenance,
-      dueDate: dueDate(input.contractDate, m.monthsAfterContract, m.daysAfterContract),
+      month: months[i] === undefined ? undefined : monthKey(months[i]),
     };
   });
 
@@ -368,7 +406,112 @@ export function formatPercent(p: number): string {
   return `${dec.format(p * 100)}%`;
 }
 
-/** Tháng/năm, ví dụ 06/2027 */
-export function formatDate(d: Date): string {
-  return `${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+export type CashFlowRow = {
+  /** YYYY-MM */
+  month: string;
+  /** Các sự kiện trong tháng (đợt thanh toán, giải ngân, mốc vay) */
+  events: string[];
+  /** Đóng cho chủ đầu tư */
+  developer: number;
+  /** Trả ngân hàng (gốc + lãi khách tự trả) */
+  bank: number;
+  spend: number;
+  /** Tổng đã chi tới hết tháng */
+  cumSpend: number;
+  /** Số dư = tiền mặt + tiền để dành lũy kế − tổng đã chi */
+  balance: number;
+};
+
+export type CashFlow = {
+  rows: CashFlowRow[];
+  /** Tổng khách tự đóng cho chủ đầu tư tới hết đợt bàn giao */
+  toHandover: number;
+  minBalance: number;
+  minMonth: string;
+  /** Tháng đầu tiên số dư âm */
+  firstShortMonth?: string;
+  /** Tiền để dành mỗi tháng tối thiểu để không tháng nào thiếu (với tiền mặt hiện có) */
+  neededSaving: number;
+  /** Tiền mặt còn thiếu ngay trong tháng bắt đầu — để dành thêm không bù được */
+  shortNow: number;
+};
+
+/**
+ * Dòng tiền từng tháng của khách: các đợt đóng cho CĐT, tiền trả ngân hàng sau giải ngân,
+ * so với tiền mặt hiện có + tiền để dành mỗi tháng (bắt đầu từ tháng sau tháng bắt đầu).
+ * undefined nếu chưa biết tháng của các đợt (chưa có tháng ký HĐMB).
+ */
+export function cashFlow(
+  quote: Quote,
+  opts: { start: string; cash: number; saving: number },
+): CashFlow | undefined {
+  const start = monthIndex(opts.start);
+  if (start === undefined || quote.schedule.some((r) => r.month === undefined)) return undefined;
+  // Đợt đã qua (tháng trước tháng bắt đầu) coi như đến hạn ngay tháng bắt đầu
+  const at = (r: ScheduleRow) => Math.max(monthIndex(r.month) ?? start, start);
+
+  const events = new Map<number, string[]>();
+  const addEvent = (t: number, text: string) => events.set(t, [...(events.get(t) ?? []), text]);
+  const developer = new Map<number, number>();
+  let disbursedAt: number | undefined;
+  let handoverAt: number | undefined;
+  let last = start;
+  for (const r of quote.schedule) {
+    const t = at(r);
+    last = Math.max(last, t);
+    if (r.includesMaintenance && handoverAt === undefined) handoverAt = t;
+    if (r.payer === "bank") {
+      disbursedAt = Math.max(disbursedAt ?? t, t);
+      addEvent(t, `${r.label}: ngân hàng giải ngân`);
+    } else {
+      developer.set(t, (developer.get(t) ?? 0) + r.amount);
+      addEvent(t, r.label);
+    }
+  }
+  handoverAt ??= last;
+
+  const loan = quote.loan;
+  const repay = new Map<number, number>();
+  let end = last;
+  if (loan && disbursedAt !== undefined) {
+    for (const row of loan.schedule) repay.set(disbursedAt + row.month, row.payment);
+    if (loan.supportMonths > 0) addEvent(disbursedAt + loan.supportMonths + 1, "Hết thời gian hỗ trợ lãi suất");
+    addEvent(disbursedAt + loan.graceMonths + 1, "Bắt đầu trả gốc");
+    end = Math.max(end, disbursedAt + Math.max(loan.supportMonths, loan.graceMonths) + 12);
+  }
+  end = Math.min(end, start + 120);
+
+  const rows: CashFlowRow[] = [];
+  let cum = 0;
+  let toHandover = 0;
+  let minBalance = Infinity;
+  let minMonth = monthKey(start);
+  let firstShortMonth: string | undefined;
+  let neededSaving = 0;
+  let shortNow = 0;
+  for (let t = start; t <= end; t++) {
+    const dev = developer.get(t) ?? 0;
+    const bank = repay.get(t) ?? 0;
+    if (t <= handoverAt) toHandover += dev;
+    cum += dev + bank;
+    const n = t - start;
+    const balance = opts.cash + opts.saving * n - cum;
+    if (n === 0) shortNow = Math.max(0, cum - opts.cash);
+    else neededSaving = Math.max(neededSaving, (cum - opts.cash) / n);
+    if (balance < minBalance) {
+      minBalance = balance;
+      minMonth = monthKey(t);
+    }
+    if (balance < 0 && firstShortMonth === undefined) firstShortMonth = monthKey(t);
+    rows.push({
+      month: monthKey(t),
+      events: events.get(t) ?? [],
+      developer: dev,
+      bank,
+      spend: dev + bank,
+      cumSpend: cum,
+      balance,
+    });
+  }
+  return { rows, toHandover, minBalance, minMonth, firstShortMonth, neededSaving: Math.ceil(neededSaving), shortNow };
 }

@@ -6,7 +6,7 @@ import { units } from "./units.ts";
  * Sheet SP → units.json, sheet CTCK + CHI TIẾT → các PTTT bên dưới.
  */
 
-const HANDOVER = "Thông báo bàn giao căn hộ (Dự kiến Quý 4/2028)";
+const HANDOVER = "Thông báo bàn giao căn hộ (Dự kiến 10/2028)";
 const CERTIFICATE = "Thông báo bàn giao Giấy chứng nhận";
 
 /** Ghi chú tiến độ xây dựng theo thứ tự đợt sau HĐMB (sheet CHI TIẾT, cột H) */
@@ -35,7 +35,7 @@ function head(firstPercent: number): Milestone[] {
     },
     {
       label: "Đợt 1",
-      due: "Ký Hợp đồng mua bán – Hoàn thành xong phần móng cọc (Dự kiến Quý 2/2027)",
+      due: "Ký Hợp đồng mua bán – Hoàn thành xong phần móng cọc (Dự kiến 04/2027)",
       note: "Đã bao gồm số tiền Thỏa thuận đảm bảo (nếu có)",
       percent: firstPercent,
       deductAdvances: true,
@@ -140,7 +140,7 @@ function specialHead(): Milestone[] {
     },
     {
       label: "Đợt 1",
-      due: "Ký Hợp đồng mua bán – Hoàn thành xong phần móng cọc (Dự kiến Quý 2/2027)",
+      due: "Ký Hợp đồng mua bán – Hoàn thành xong phần móng cọc (Dự kiến 04/2027)",
       note: "Đã bao gồm số tiền Thỏa thuận ký quỹ",
       percent: 0.1,
       deductAdvances: true,
@@ -234,6 +234,7 @@ export const serenaRiverside: Project = {
   description: "Căn hộ & Officetel",
   unitTypes: { CH: "Căn hộ", OT: "Officetel" },
   defaultUnitPrice: { CH: 56_300_000, OT: 50_600_000 },
+  timeline: { contractMonth: "2027-04", handoverMonth: "2028-10" },
   vatRate: 0.1,
   maintenanceRate: 0.02,
   landValuePerM2: 1_844_504,

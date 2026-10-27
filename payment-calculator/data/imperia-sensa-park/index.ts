@@ -14,7 +14,7 @@ import { units } from "./units.ts";
  */
 
 const DEPOSIT = 100_000_000;
-const HANDOVER = "Bàn giao (Dự kiến Quý IV/2028) + Gồm phí bảo trì 2%";
+const HANDOVER = "Bàn giao (Dự kiến 10/2028) + Gồm phí bảo trì 2%";
 const CERTIFICATE = "Nhận Giấy chứng nhận (GCN)";
 
 /** Đặt cọc + Đợt 1 (ký TTKQ) + Đợt 2 (ký HĐMB = ngày D) */
@@ -28,7 +28,7 @@ function head(contractPercent: number): Milestone[] {
       percent: 0.1,
       deductAdvances: true,
     },
-    { label: "Đợt 2", due: "Ký HĐMB (Dự kiến Quý I/2027) (D)", percent: contractPercent, monthsAfterContract: 0 },
+    { label: "Đợt 2", due: "Ký HĐMB (Dự kiến 01/2027) (D)", percent: contractPercent, monthsAfterContract: 0 },
   ];
 }
 
@@ -77,6 +77,7 @@ export const imperiaSensaPark: Project = {
     "3PN": 90_000_000,
     Duplex: 90_000_000,
   },
+  timeline: { contractMonth: "2027-01", handoverMonth: "2028-10" },
   vatRate: 0.1,
   maintenanceRate: 0.02,
   maintenanceBase: "list",
@@ -142,7 +143,7 @@ export const imperiaSensaPark: Project = {
           daysAfterContract: 30,
         },
         { label: "Đợt 4", due: HANDOVER, note: "Khách thanh toán 15%", percent: 0.15, includeMaintenance: true },
-        { label: "Đợt 4", due: "Bàn giao (Dự kiến Quý IV/2028)", note: "Ngân hàng giải ngân 15%", percent: 0.15, payer: "bank" },
+        { label: "Đợt 4", due: "Bàn giao (Dự kiến 10/2028)", note: "Ngân hàng giải ngân 15%", percent: 0.15, payer: "bank" },
         certificate("Đợt 5"),
       ],
       LOAN,

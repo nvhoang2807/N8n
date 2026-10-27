@@ -1,4 +1,4 @@
-import { computeQuote, unitListPrice } from "./calc.ts";
+import { computeQuote, monthIndex, unitListPrice } from "./calc.ts";
 import type { Project } from "./types";
 
 export type ValidationResult = { errors: string[]; warnings: string[] };
@@ -57,6 +57,9 @@ export function validateProject(p: Project): ValidationResult {
 
   // PTTT
   if (p.methods.length === 0) errors.push("Dự án chưa có phương thức thanh toán nào.");
+  for (const [label, v] of [["ký HĐMB", p.timeline?.contractMonth], ["bàn giao", p.timeline?.handoverMonth], ["GCN", p.timeline?.certificateMonth]] as const) {
+    if (v && monthIndex(v) === undefined) errors.push(`Tháng ${label} dự kiến không hợp lệ (cần dạng YYYY-MM).`);
+  }
   const methodIds = new Set<string>();
   const sampleUnit = p.units.find((u) => u.grossArea > 0 || u.netArea > 0);
   // Giá dùng để tính thử: giá của căn mẫu; loại căn chưa có đơn giá tham khảo thì lấy đơn giá
