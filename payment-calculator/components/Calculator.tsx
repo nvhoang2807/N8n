@@ -24,6 +24,8 @@ type State = {
   unitCode: string;
   /** Đơn giá/m² nhân viên nhập; rỗng = dùng giá mặc định */
   unitPrice: string;
+  /** Giá niêm yết cả căn (VND) nhập thẳng như ô "Giá niêm yết" trong Excel; có thì bỏ qua đơn giá/m² */
+  listTotal: string;
   methodId: string;
   optional: Record<string, number>;
   /** Lựa chọn tùy chọn đơn giá (vị trí trong choices), theo id */
@@ -57,6 +59,7 @@ function initialState(project: Project): State {
   return {
     unitCode: project.units[0]?.code ?? "",
     unitPrice: "",
+    listTotal: "",
     methodId: project.methods[0]?.id ?? "",
     optional: Object.fromEntries(project.optionalDiscounts.map((d) => [d.id, d.default])),
     priceOpts: Object.fromEntries((project.priceOptions ?? []).map((o) => [o.id, o.default])),
@@ -99,6 +102,7 @@ function stateFromUrl(project: Project): State {
   const method = q.get("m");
   if (method && project.methods.some((m) => m.id === method)) s.methodId = method;
   s.unitPrice = q.get("dg") ?? "";
+  s.listTotal = digits(q.get("gn") ?? "");
   s.contractDate = (q.get("hd") ?? "").slice(0, 7);
   s.cash = digits(q.get("tm") ?? "");
   s.saving = digits(q.get("td") ?? "");
@@ -125,6 +129,7 @@ function stateToUrl(project: Project, s: State): string {
   const q = new URLSearchParams();
   if (s.unitCode) q.set("u", s.unitCode);
   if (s.unitPrice) q.set("dg", s.unitPrice);
+  if (s.listTotal) q.set("gn", s.listTotal);
   q.set("m", s.methodId);
   for (const o of project.priceOptions ?? []) {
     const v = s.priceOpts[o.id] ?? o.default;
@@ -228,7 +233,10 @@ export default function Calculator({
   const unit: Unit | undefined = customMode ? customUnit(project, state) : listedUnit;
 
   const perM2 = state?.unitPrice ? Number(state.unitPrice) : undefined;
-  const listPrice = unit ? applyPriceOptions(project, unitListPrice(project, unit, perM2), state?.priceOpts) : 0;
+  const listTotal = state?.listTotal ? Number(state.listTotal) : 0;
+  const listPrice = unit
+    ? applyPriceOptions(project, listTotal > 0 ? listTotal : unitListPrice(project, unit, perM2), state?.priceOpts)
+    : 0;
 
   // Các loại căn có trong danh sách (theo thứ tự khai báo của dự án) kèm số mã căn
   const listedTypes = useMemo(() => {
@@ -404,7 +412,7 @@ export default function Calculator({
                   setTypeFilter(type);
                   // Đổi sang loại khác → chọn sẵn mã căn đầu tiên của loại đó
                   const first = project.units.find((u) => u.type === type);
-                  if (type && first && listedUnit?.type !== type) update({ unitCode: first.code, unitPrice: "" });
+                  if (type && first && listedUnit?.type !== type) update({ unitCode: first.code, unitPrice: "", listTotal: "" });
                 }}
               >
                 <option value="">Tất cả loại căn ({project.units.length})</option>
@@ -423,7 +431,7 @@ export default function Calculator({
               options={unitOptions}
               allowCustom={project.customUnits}
               onChange={(code) =>
-                update(project.customUnits ? { unitCode: code } : { unitCode: code, unitPrice: "" })
+                update(project.customUnits ? { unitCode: code } : { unitCode: code, unitPrice: "", listTotal: "" })
               }
             />
           </label>
@@ -464,8 +472,12 @@ export default function Calculator({
               Đơn giá (đ/m² {areaName})
               <input
                 inputMode="numeric"
-                value={formatVnd(Number(state.unitPrice || defaultPerM2 || 0))}
-                onChange={(e) => update({ unitPrice: digits(e.target.value) })}
+                value={
+                  listTotal > 0 && unitArea > 0
+                    ? formatVnd(Math.round(listTotal / unitArea))
+                    : formatVnd(Number(state.unitPrice || defaultPerM2 || 0))
+                }
+                onChange={(e) => update({ unitPrice: digits(e.target.value), listTotal: "" })}
               />
               {!state.unitPrice && unitPerM2 !== undefined && unit?.price !== undefined ? (
                 <small className="muted">
@@ -481,6 +493,21 @@ export default function Calculator({
                   <small className="muted">Đơn giá áp dụng: {formatVnd(applied)} đ/m² (đã gồm tùy chọn bên cạnh)</small>
                 ) : null;
               })()}
+            </label>
+          )}
+          {unit && !customMode && (
+            <label>
+              Giá niêm yết cả căn (đ) — tùy chọn
+              <input
+                inputMode="numeric"
+                value={listTotal > 0 ? formatVnd(listTotal) : ""}
+                placeholder={formatVnd(unitListPrice(project, unit, perM2))}
+                onChange={(e) => update({ listTotal: digits(e.target.value) })}
+              />
+              <small className="muted">
+                Nhập đúng giá niêm yết trong bảng giá (như ô “Giá niêm yết” trong Excel, trước mọi chiết khấu). Có nhập
+                thì đơn giá/m² tự quy ra, không bị làm tròn.
+              </small>
             </label>
           )}
           {(project.priceOptions ?? []).map((o) => (
