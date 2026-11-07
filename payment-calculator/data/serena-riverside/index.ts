@@ -7,7 +7,14 @@ import { units } from "./units.ts";
  */
 
 const HANDOVER = "Thông báo bàn giao căn hộ (Dự kiến 10/2028)";
-const CERTIFICATE = "Thông báo bàn giao Giấy chứng nhận";
+const CERTIFICATE = "Thông báo bàn giao giấy chứng nhận";
+/** Câu từ các khoản đầu theo file "A-07-05 BẢNG TẠM TÍNH GIÁ" (sheet PTV, bảng PTTT) */
+const DEPOSIT_DUE = "Thanh toán theo Phiếu đăng ký NV mua";
+const ESCROW_DUE = "Ký Phiếu đăng ký NV (trong vòng 05 ngày làm việc)";
+const ESCROW_NOTE = "Ứng với 5% giá trị CH (Chưa VAT & chưa PBT)";
+const CONTRACT_DUE = "Ký HĐMB – Hoàn thành xong phần móng cọc (Dự kiến 04/2027)";
+const CONTRACT_NOTE = "Đã bao gồm số tiền Thỏa thuận ký quỹ";
+const MAINTENANCE = "+ Gồm Phí Bảo trì 2%";
 
 /** Ghi chú tiến độ xây dựng theo thứ tự đợt sau HĐMB (sheet CHI TIẾT, cột H) */
 function constructionNote(k: number): string {
@@ -20,14 +27,14 @@ function head(firstPercent: number): Milestone[] {
   return [
     {
       label: "Cọc",
-      due: "Thanh toán theo Phiếu Đặt Cọc",
+      due: DEPOSIT_DUE,
       amount: 50_000_000,
       advance: true,
     },
     {
-      label: "VBTT",
-      due: "Ký Văn bản Thỏa thuận (trong vòng 7 ngày kể từ ngày cọc)",
-      note: "Tương đương với 5% giá trị căn hộ (Chưa gồm VAT và chưa phí bảo trì)",
+      label: "Ký quỹ",
+      due: ESCROW_DUE,
+      note: ESCROW_NOTE,
       percent: 0.05,
       percentBase: "list",
       advance: true,
@@ -35,8 +42,8 @@ function head(firstPercent: number): Milestone[] {
     },
     {
       label: "Đợt 1",
-      due: "Ký Hợp đồng mua bán – Hoàn thành xong phần móng cọc (Dự kiến 04/2027)",
-      note: "Đã bao gồm số tiền Thỏa thuận đảm bảo (nếu có)",
+      due: CONTRACT_DUE,
+      note: CONTRACT_NOTE,
       percent: firstPercent,
       deductAdvances: true,
       monthsAfterContract: 0,
@@ -48,7 +55,7 @@ function tail(startIndex: number): Milestone[] {
   return [
     {
       label: `Đợt ${startIndex}`,
-      due: `${HANDOVER} + Gồm phí bảo trì 2%`,
+      due: `${HANDOVER} ${MAINTENANCE}`,
       percent: 0.25,
       includeMaintenance: true,
     },
@@ -74,7 +81,7 @@ function fast(percent: number, discount: number): PaymentMethod {
   return {
     id: `pttt-nhanh-${p}`,
     name: `PTTT nhanh ${p}%`,
-    summary: `CK ${formatPct(discount)} tổng giá trị căn hộ`,
+    summary: `CK ${formatPct(discount)}`,
     discounts: [{ label: `Chiết khấu PTTT nhanh ${p}%`, percent: discount }],
     milestones:
       rest === 0 ? [...head(percent), ...tail(2)] : monthly(percent, Array(rest).fill(0.025)),
@@ -132,16 +139,16 @@ function specialHead(): Milestone[] {
   return [
     {
       label: "Ký quỹ",
-      due: "Thanh toán theo Thỏa thuận ký quỹ",
-      note: "5% giá trị căn hộ (chưa bao gồm VAT và PBT)",
+      due: ESCROW_DUE,
+      note: ESCROW_NOTE,
       percent: 0.05,
       percentBase: "list",
       advance: true,
     },
     {
       label: "Đợt 1",
-      due: "Ký Hợp đồng mua bán – Hoàn thành xong phần móng cọc (Dự kiến 04/2027)",
-      note: "Đã bao gồm số tiền Thỏa thuận ký quỹ",
+      due: CONTRACT_DUE,
+      note: CONTRACT_NOTE,
       percent: 0.1,
       deductAdvances: true,
       monthsAfterContract: 0,
@@ -149,7 +156,7 @@ function specialHead(): Milestone[] {
     ...[0.1, ...Array(20).fill(0.01)].map(
       (percent: number, i): Milestone => ({
         label: `Đợt ${i + 2}`,
-        due: `${String(i + 1).padStart(2, "0")} tháng sau ký Hợp đồng mua bán`,
+        due: `${String(i + 1).padStart(2, "0")} tháng kể từ ngày ký HĐMB`,
         note: specialConstructionNote(i + 1),
         percent,
         monthsAfterContract: i + 1,
@@ -158,7 +165,7 @@ function specialHead(): Milestone[] {
   ];
 }
 
-const BANK_NOTE = "Ngân hàng giải ngân 100% Đợt 23 (KH đã ký Thỏa thuận 3 bên và Thỏa thuận hỗ trợ lãi suất với CĐT và Ngân hàng)";
+const BANK_NOTE = "Ngân hàng giải ngân 100% Đợt 23";
 const condition = (paidPercent: string) =>
   `Chỉ áp dụng sau khi KH đã thanh toán đủ ${paidPercent} giá trị HĐMB và 2% phí bảo trì, ký Thỏa thuận 3 bên và Thỏa thuận hỗ trợ lãi suất. ` +
   "Nếu KH không chọn hỗ trợ lãi suất mà tự thanh toán Đợt 23 sẽ được CK 2.5% giá trị HĐMB khi thanh toán bàn giao nhà.";
@@ -171,17 +178,17 @@ const condition = (paidPercent: string) =>
 export const specialMethod: PaymentMethod = {
   id: "pttt-dac-biet",
   name: "PTTT Đặc biệt 1",
-  summary: "40% trong 21 tháng · NH giải ngân 30% khi bàn giao · CĐT hỗ trợ 100% lãi suất 12 tháng · Tự trả Đợt 23: CK 2.5%",
+  summary: "Hỗ trợ 100% LS vay trong 12 tháng · Tự trả Đợt 23: CK 2.5%",
   discounts: [],
   milestones: [
     ...specialHead(),
     { label: "Đợt 23", due: HANDOVER, note: BANK_NOTE, percent: 0.3, payer: "bank" },
-    { label: "Đợt 24", due: `${HANDOVER} + 2% Phí bảo trì`, percent: 0.25, includeMaintenance: true },
+    { label: "Đợt 24", due: `${HANDOVER} ${MAINTENANCE}`, percent: 0.25, includeMaintenance: true },
     { label: "Đợt 25", due: CERTIFICATE, percent: 0.05, remainder: true },
   ],
   loan: {
     ...LOAN_DEFAULTS,
-    policy: `CĐT hỗ trợ 100% lãi suất vay trong 12 tháng cho Đợt 23 (30%), ân hạn gốc 24 tháng. ${condition("65%")}`,
+    policy: `Hỗ trợ 100% LS vay trong 12 tháng (Đợt 23, tương ứng 30%), ân hạn gốc 24 tháng. ${condition("65%")}`,
     supportMonths: 12,
     customerRate: 0,
     gracePrincipalMonths: 24,
@@ -196,14 +203,14 @@ export const specialMethod: PaymentMethod = {
 export const specialMethod2: PaymentMethod = {
   id: "pttt-dac-biet-2",
   name: "PTTT Đặc biệt 2",
-  summary: "40% trong 21 tháng · NH giải ngân 55% khi bàn giao · CĐT hỗ trợ 100% lãi suất 6 tháng · Tự trả Đợt 23: CK 2.5%",
+  summary: "Hỗ trợ 100% LS vay trong 06 tháng · Tự trả Đợt 23: CK 2.5%",
   discounts: [],
   milestones: [
     ...specialHead(),
     { label: "Đợt 23", due: HANDOVER, note: BANK_NOTE, percent: 0.55, payer: "bank" },
     {
       label: "Đợt 23",
-      due: `${HANDOVER} + 2% Phí bảo trì`,
+      due: `${HANDOVER} ${MAINTENANCE}`,
       note: "Khách hàng thanh toán 2% phí bảo trì",
       percent: 0,
       includeMaintenance: true,
@@ -212,7 +219,7 @@ export const specialMethod2: PaymentMethod = {
   ],
   loan: {
     ...LOAN_DEFAULTS,
-    policy: `CĐT hỗ trợ 100% lãi suất vay trong 06 tháng cho Đợt 23 (55%), ân hạn gốc 24 tháng. ${condition("40%")}`,
+    policy: `Hỗ trợ 100% LS vay trong 06 tháng (Đợt 23, tương ứng 55%), ân hạn gốc 24 tháng. ${condition("40%")}`,
     supportMonths: 6,
     customerRate: 0,
     gracePrincipalMonths: 24,
@@ -260,7 +267,7 @@ export const serenaRiverside: Project = {
     {
       id: "pttt-chuan",
       name: "PTTT Chuẩn",
-      summary: "CK 4.9% tổng giá trị căn hộ",
+      summary: "CK 4.9%",
       discounts: [{ label: "Chiết khấu PTTT Chuẩn", percent: 0.049 }],
       milestones: monthly(0.1, [0.1, ...Array(20).fill(0.025)]),
     },
@@ -272,13 +279,13 @@ export const serenaRiverside: Project = {
     loanMethod(
       "pttt-vay-1",
       "PTTT Vay 1",
-      "CĐT hỗ trợ 100% lãi suất vay trong thời gian 24 tháng",
+      "Hỗ trợ 100% LS vay trong 24 tháng",
       0,
       0.1,
       0.5,
       {
         ...LOAN_DEFAULTS,
-        policy: "CĐT hỗ trợ 100% lãi suất vay trong thời gian 24 tháng",
+        policy: "Hỗ trợ 100% LS vay trong 24 tháng",
         supportMonths: 24,
         customerRate: 0,
         gracePrincipalMonths: 24,
@@ -287,14 +294,13 @@ export const serenaRiverside: Project = {
     loanMethod(
       "pttt-vay-2",
       "PTTT Vay 2",
-      "KH trả lãi suất 4,6%/năm cố định 03 năm đầu, CĐT hỗ trợ phần chênh lệch",
+      "Hỗ trợ 100% phần chênh lệch LS vay trong 36 tháng so với mức LS cố định 4.6%/năm",
       0,
       0.1,
       0.5,
       {
         ...LOAN_DEFAULTS,
-        policy:
-          "KH thanh toán lãi suất vay 4,6%/năm, cố định trong 03 năm đầu. Chủ đầu tư hỗ trợ phần chênh lệch lãi suất phát sinh.",
+        policy: "Hỗ trợ 100% phần chênh lệch LS vay trong 36 tháng so với mức LS cố định 4.6%/năm",
         supportMonths: 36,
         customerRate: 0.046,
         gracePrincipalMonths: 0,
@@ -303,14 +309,13 @@ export const serenaRiverside: Project = {
     loanMethod(
       "pttt-vay-3",
       "PTTT Vay 3",
-      "KH trả lãi suất 6,1%/năm cố định 04 năm đầu, CĐT hỗ trợ phần chênh lệch",
+      "Hỗ trợ 100% phần chênh lệch LS vay trong 48 tháng so với mức LS cố định 6.1%/năm",
       0,
       0.1,
       0.5,
       {
         ...LOAN_DEFAULTS,
-        policy:
-          "KH thanh toán lãi suất vay 6,1%/năm, cố định trong 04 năm đầu. Chủ đầu tư hỗ trợ phần chênh lệch lãi suất phát sinh.",
+        policy: "Hỗ trợ 100% phần chênh lệch LS vay trong 48 tháng so với mức LS cố định 6.1%/năm",
         supportMonths: 48,
         customerRate: 0.061,
         gracePrincipalMonths: 0,
@@ -319,13 +324,13 @@ export const serenaRiverside: Project = {
     loanMethod(
       "pttt-vay-40",
       "PTTT Vay 40%",
-      "CK 2.1% tổng giá trị căn hộ + CĐT hỗ trợ 100% lãi suất vay trong 24 tháng",
+      "CK 2.1% · Hỗ trợ 100% LS vay trong 24 tháng",
       0.021,
       0.2,
       0.4,
       {
         ...LOAN_DEFAULTS,
-        policy: "CĐT hỗ trợ 100% lãi suất vay trong thời gian 24 tháng",
+        policy: "Hỗ trợ 100% LS vay trong 24 tháng",
         supportMonths: 24,
         customerRate: 0,
         gracePrincipalMonths: 24,

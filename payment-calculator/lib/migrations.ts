@@ -1,5 +1,6 @@
 import { imperiaSensaPark } from "../data/imperia-sensa-park/index.ts";
 import {
+  serenaRiverside,
   SPECIAL_METHODS as serenaSpecialMethods,
   specialMethod as serenaSpecialMethod,
   specialMethod2 as serenaSpecialMethod2,
@@ -207,6 +208,33 @@ export const migrations: Migration[] = [
     id: "2026-10-norton-moc-thang",
     projectId: "norton-park",
     apply: (p) => ({ ...p, timeline: p.timeline ?? { contractMonth: "2026-12", handoverMonth: "2029-09" } }),
+  },
+  {
+    // Serena Riverside: câu từ lịch thanh toán và chính sách theo file "A-07-05 BẢNG TẠM TÍNH GIÁ".
+    // Chỉ chép chữ (tên đợt, thời điểm, ghi chú, mô tả, chính sách vay) theo mã PTTT khi số đợt khớp;
+    // giữ nguyên tỷ lệ, số tiền và mọi chỉnh sửa khác trong admin
+    id: "2026-11-serena-cau-tu-theo-file",
+    projectId: "serena-riverside",
+    apply: (p) => ({
+      ...p,
+      methods: p.methods.map((m) => {
+        const code = serenaRiverside.methods.find((c) => c.id === m.id);
+        if (!code) return m;
+        const sameShape = code.milestones.length === m.milestones.length;
+        return {
+          ...m,
+          summary: code.summary,
+          milestones: sameShape
+            ? m.milestones.map((x, i) => {
+                const c = code.milestones[i];
+                const { note: _drop, ...rest } = x;
+                return { ...rest, label: c.label, due: c.due, ...(c.note !== undefined ? { note: c.note } : {}) };
+              })
+            : m.milestones,
+          ...(m.loan && code.loan ? { loan: { ...m.loan, policy: code.loan.policy } } : {}),
+        };
+      }),
+    }),
   },
 ];
 

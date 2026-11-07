@@ -178,3 +178,29 @@ test("tự sửa dữ liệu đã lưu: quy 'Quý' ra tháng cố định + thê
   const { project: n } = applyMigrations({ ...norton, timeline: undefined, migrations: [] });
   assert.deepEqual(n.timeline, norton.timeline);
 });
+
+test("Serena: câu từ theo file A-07-05 và tự sửa dữ liệu đã lưu, giữ nguyên số liệu", async () => {
+  const { applyMigrations } = await import("./migrations.ts");
+  const { sameConfig } = await import("./types.ts");
+  const current = defaultProjects.find((p) => p.id === "serena-riverside")!;
+  const chuan = current.methods.find((m) => m.id === "pttt-chuan")!;
+  assert.equal(chuan.milestones[0].due, "Thanh toán theo Phiếu đăng ký NV mua");
+  assert.equal(chuan.milestones[1].due, "Ký Phiếu đăng ký NV (trong vòng 05 ngày làm việc)");
+  assert.equal(chuan.milestones[1].note, "Ứng với 5% giá trị CH (Chưa VAT & chưa PBT)");
+  assert.equal(chuan.milestones[2].due, "Ký HĐMB – Hoàn thành xong phần móng cọc (Dự kiến 04/2027)");
+  assert.equal(chuan.milestones.at(-2)!.due, "Thông báo bàn giao căn hộ (Dự kiến 10/2028) + Gồm Phí Bảo trì 2%");
+  assert.equal(current.methods.find((m) => m.id === "pttt-vay-1")!.summary, "Hỗ trợ 100% LS vay trong 24 tháng");
+  // Bản cũ đã lưu: chữ khác, số liệu giống; chạy migration → chữ theo code, số liệu không đổi
+  const old = {
+    ...current,
+    migrations: [],
+    methods: current.methods.map((m) => ({
+      ...m,
+      summary: "cũ",
+      milestones: m.milestones.map((x) => ({ ...x, due: "cũ", note: "cũ" })),
+      ...(m.loan ? { loan: { ...m.loan, policy: "cũ" } } : {}),
+    })),
+  };
+  const { project } = applyMigrations(old);
+  assert.ok(sameConfig(project, current), "sau khi sửa phải trùng cấu hình trong code");
+});
