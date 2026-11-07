@@ -204,3 +204,20 @@ test("Serena: câu từ theo file A-07-05 và tự sửa dữ liệu đã lưu, 
   const { project } = applyMigrations(old);
   assert.ok(sameConfig(project, current), "sau khi sửa phải trùng cấu hình trong code");
 });
+
+test("Serena: mã căn và diện tích theo file GIỎ HÀNG; tự sửa dữ liệu đã lưu, giữ căn tự thêm", async () => {
+  const { applyMigrations } = await import("./migrations.ts");
+  const current = defaultProjects.find((p) => p.id === "serena-riverside")!;
+  assert.equal(current.units.length, 613);
+  const a = current.units.find((u) => u.code === "A-04-01")!;
+  assert.deepEqual([a.type, a.grossArea, a.netArea, a.direction], ["OT", 58.32, 52.04, "ĐB"]);
+  const b = current.units.find((u) => u.code === "B-30-14")!;
+  assert.deepEqual([b.type, b.grossArea, b.netArea, b.direction], ["CH", 51.03, 46.43, "ĐB"]);
+  // Bản đã lưu có diện tích sai + 1 căn nhân viên tự thêm
+  const wrong = current.units.map((u) => ({ ...u, grossArea: u.grossArea + 1, netArea: u.netArea - 1 }));
+  const old = { ...current, migrations: [], units: [...wrong, { code: "X-99-99", type: "CH", grossArea: 70, netArea: 65 }] };
+  const { project } = applyMigrations(old);
+  assert.equal(project.units.length, 614);
+  assert.deepEqual(project.units.slice(0, 613), current.units);
+  assert.equal(project.units.at(-1)!.code, "X-99-99");
+});

@@ -236,6 +236,16 @@ export const migrations: Migration[] = [
       }),
     }),
   },
+  {
+    // Serena Riverside: mã căn, loại, hướng, diện tích tim tường / thông thủy theo file "GIỎ HÀNG SERENA" (613 căn,
+    // nguồn đúng nhất) — ghi đè các căn trùng mã; căn nhân viên tự thêm (mã không có trong file) được giữ lại
+    id: "2026-11-serena-can-ho-theo-gio-hang",
+    projectId: "serena-riverside",
+    apply: (p) => {
+      const inFile = new Set(serenaRiverside.units.map((u) => u.code));
+      return { ...p, units: [...serenaRiverside.units, ...p.units.filter((u) => !inFile.has(u.code))] };
+    },
+  },
 ];
 
 /** Dự án mới trong code (data/) tự được thêm lên kho đã khởi tạo, không cần bấm "+ Thêm" trong admin */
