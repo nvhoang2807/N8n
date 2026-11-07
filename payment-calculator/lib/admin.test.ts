@@ -221,3 +221,12 @@ test("Serena: mã căn và diện tích theo file GIỎ HÀNG; tự sửa dữ l
   assert.deepEqual(project.units.slice(0, 613), current.units);
   assert.equal(project.units.at(-1)!.code, "X-99-99");
 });
+
+test("Serena: tự thêm chiết khấu Happy Surprise vào dữ liệu đã lưu, giữ chiết khấu khác", async () => {
+  const { applyMigrations } = await import("./migrations.ts");
+  const current = defaultProjects.find((p) => p.id === "serena-riverside")!;
+  const old = { ...current, migrations: [], optionalDiscounts: current.optionalDiscounts.filter((d) => d.id !== "happy-surprise") };
+  const { project } = applyMigrations(old);
+  assert.deepEqual(project.optionalDiscounts.map((d) => d.id), ["si", "early-bird", "happy-surprise"]);
+  assert.equal(project.optionalDiscounts.at(-1)!.default, 0);
+});

@@ -260,6 +260,14 @@ export const serenaRiverside: Project = {
       default: 0,
       base: "list",
     },
+    {
+      // Theo file "A-07-05 BẢNG TẠM TÍNH GIÁ": Happy Surprise 1.5% giá niêm yết cho khách giao dịch ráp căn thành công
+      id: "happy-surprise",
+      label: "Happy Surprise (KH giao dịch ráp căn thành công)",
+      options: [0, 0.015],
+      default: 0,
+      base: "list",
+    },
   ],
   units,
   methods: [

@@ -39,3 +39,19 @@ test("Serena: VBTT = 5% giá công bố − tiền cọc", () => {
   const q = computeQuote(srn, srn.methods.find((m) => m.id === "pttt-chuan")!, { listPrice, netArea: unit.netArea });
   assert.equal(q.schedule[1].amount, Math.round(listPrice * 0.05) - 50_000_000);
 });
+
+test("Serena: Happy Surprise 1.5% theo file A-07-05 (căn A-07-05, Early Bird 1.5% + Happy Surprise 1.5%)", () => {
+  const unit = srn.units.find((u) => u.code === "A-07-05")!;
+  const listPrice = 2_093_949_732; // giá niêm yết trong file
+  const method = srn.methods.find((m) => m.id === "pttt-vay-1")!;
+  const q = computeQuote(srn, method, {
+    listPrice,
+    netArea: unit.netArea,
+    optionalDiscounts: { "early-bird": 0.015, "happy-surprise": 0.015 },
+  });
+  assert.equal(q.discounts.map((d) => d.amount).join(","), "31409246,31409246"); // M9, M10
+  assert.equal(q.netPrice, 2_031_131_240); // M18 trong file
+  // Mặc định không áp dụng: giá như cũ
+  const base = computeQuote(srn, method, { listPrice, netArea: unit.netArea });
+  assert.equal(base.netPrice, listPrice);
+});

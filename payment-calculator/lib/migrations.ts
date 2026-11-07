@@ -246,6 +246,15 @@ export const migrations: Migration[] = [
       return { ...p, units: [...serenaRiverside.units, ...p.units.filter((u) => !inFile.has(u.code))] };
     },
   },
+  {
+    // Serena Riverside: thêm chiết khấu Happy Surprise 1.5% (file A-07-05), mặc định không áp dụng
+    id: "2026-11-serena-happy-surprise",
+    projectId: "serena-riverside",
+    apply: (p) => {
+      const add = serenaRiverside.optionalDiscounts.find((d) => d.id === "happy-surprise")!;
+      return p.optionalDiscounts.some((d) => d.id === add.id) ? p : { ...p, optionalDiscounts: [...p.optionalDiscounts, add] };
+    },
+  },
 ];
 
 /** Dự án mới trong code (data/) tự được thêm lên kho đã khởi tạo, không cần bấm "+ Thêm" trong admin */
